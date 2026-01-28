@@ -268,7 +268,7 @@ function systemKeyFromRow(row){
   if (sys === "pump" || sys === "pumps") return "PUMPS";
   if (sys === "filtration" || sys === "filters") return "FILTERS";
   if (sys === "heating") return "HEATING";
-  if (sys === "disinfection" || sys === "uv") return "UV";
+  if (sys === "disinfection" || sys === "uv") return "DISINFECTION";
 
   // fallback to Component ID prefix
   const id = (row.id || "").trim().toUpperCase();
