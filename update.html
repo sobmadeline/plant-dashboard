@@ -125,6 +125,7 @@
     <button class="tab active" id="btnUpdate" type="button" onclick="switchTab('update')">Update</button>
     <button class="tab" id="btnHandover" type="button" onclick="switchTab('handover')">Handover</button>
     <button class="tab" id="btnChemical" type="button" onclick="switchTab('chemical')">Chemical</button>
+    <button class="tab" id="btnClock" type="button" onclick="switchTab('clock')">Clock In/Out</button>
   </div>
 
   <!-- UPDATE TAB -->
@@ -232,19 +233,19 @@
       <div style="font-weight:900;font-size:16px;margin-bottom:6px">Current levels</div>
 
       <label>Free Chlorine (ppm)</label>
-      <input id="curFC" inputmode="decimal" placeholder="e.g., 4.9" />
+      <input id="curFC" inputmode="decimal" placeholder="e.g., 3.8" />
 
       <label>pH</label>
-      <input id="curPH" inputmode="decimal" placeholder="e.g., 7.65" />
+      <input id="curPH" inputmode="decimal" placeholder="e.g., 7.5" />
 
       <label>Alkalinity (ppm)</label>
-      <input id="curALK" inputmode="decimal" placeholder="e.g., 45" />
+      <input id="curALK" inputmode="decimal" placeholder="e.g., 120" />
 
       <label>Cyanuric Acid (ppm)</label>
-      <input id="curCYA" inputmode="decimal" placeholder="e.g., 17" />
+      <input id="curCYA" inputmode="decimal" placeholder="e.g., 45" />
 
       <label>Calcium Hardness (ppm)</label>
-      <input id="curCH" inputmode="decimal" placeholder="optional" />
+      <input id="curCH" inputmode="decimal" placeholder="e.g., 120" />
     </div>
 
     <div class="card">
@@ -291,6 +292,38 @@
   <div class="toast" id="toast"></div>
 
 <script>
+
+
+<!-- CLOCK TAB -->
+<div id="tab-clock" class="wrap" style="display:none">
+  <div class="card">
+    <div style="font-weight:900;font-size:18px;margin-bottom:8px">Clock in / out</div>
+    <div class="small">ZoomShift time clock</div>
+
+    <button class="submit" type="button" onclick="openClockSameTab()">Open Time Clock (same tab)</button>
+    <button class="submit secondary" type="button" style="margin-top:8px" onclick="openClockNewTab()">Open Time Clock (new tab)</button>
+
+    <div class="small" style="margin-top:10px">
+      If the embedded view below stays blank, use the buttons above (ZoomShift may block embedding).
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:900;font-size:16px;margin-bottom:6px">Embedded (if supported)</div>
+    <div class="small" style="margin-bottom:8px">Best for wall/iPad kiosk use, but depends on ZoomShift settings.</div>
+
+    <div style="border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#06181f">
+      <iframe
+        id="clockFrame"
+        title="ZoomShift Time Clock"
+        src="https://app.zoomshift.com/clm058b/time_clock"
+        style="width:100%;height:70vh;border:0"
+        referrerpolicy="no-referrer-when-downgrade"
+      ></iframe>
+    </div>
+  </div>
+</div>
+
   // === LIVE DATA URLS ===
   const PLANT_CSV_URL =
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=0&single=true&output=csv";
@@ -577,17 +610,20 @@ if (!String(text).startsWith("OK")) {
   }
 
   function switchTab(which){
-    const panels = {
-      update: document.getElementById('tab-update'),
-      handover: document.getElementById('tab-handover'),
-      chemical: document.getElementById('tab-chemical')
-    };
+const panels = {
+  update: document.getElementById('tab-update'),
+  handover: document.getElementById('tab-handover'),
+  chemical: document.getElementById('tab-chemical'),
+  clock: document.getElementById('tab-clock')
+};
 
-    const buttons = {
-      update: document.getElementById('btnUpdate'),
-      handover: document.getElementById('btnHandover'),
-      chemical: document.getElementById('btnChemical')
-    };
+const buttons = {
+  update: document.getElementById('btnUpdate'),
+  handover: document.getElementById('btnHandover'),
+  chemical: document.getElementById('btnChemical'),
+  clock: document.getElementById('btnClock')
+};
+
 
     Object.keys(panels).forEach(k => {
       panels[k].style.display = (k === which) ? 'block' : 'none';
@@ -820,6 +856,17 @@ if (!String(text).startsWith("OK")) {
     console.error(err);
     toast("Could not load sheet data", 2500);
   });
+
+  const ZOOMSHIFT_CLOCK_URL = "https://app.zoomshift.com/clm058b/time_clock";
+
+function openClockSameTab(){
+  window.location.href = ZOOMSHIFT_CLOCK_URL;
+}
+
+function openClockNewTab(){
+  window.open(ZOOMSHIFT_CLOCK_URL, "_blank", "noopener");
+}
+
 </script>
 </body>
 </html>
