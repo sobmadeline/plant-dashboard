@@ -550,10 +550,10 @@
     const res = await fetch(WRITE_URL, { method:"POST", body });
     const text = await res.text();
 
-    if (!String(text).startsWith("OK")) {
-      console.error(text);
-      return toast("Failed to set handover.", 3000);
-    }
+if (!String(text).startsWith("OK")) {
+  console.error(text);
+  return toast(text, 4500); // show real server error
+}
 
     toast("Handover set ✅", 2000);
     document.getElementById("handoverMsg").value = "";
