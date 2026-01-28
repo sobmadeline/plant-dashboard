@@ -293,6 +293,10 @@
 
 <script>
 
+window.addEventListener("error", (ev) => {
+  const msg = ev && ev.message ? ev.message : "Unknown script error";
+  toast("JS ERROR: " + msg, 6000);
+});
 
 <!-- CLOCK TAB -->
 <div id="tab-clock" class="wrap" style="display:none">
@@ -609,29 +613,38 @@ if (!String(text).startsWith("OK")) {
     await refreshHandover();
   }
 
-  function switchTab(which){
-const panels = {
-  update: document.getElementById('tab-update'),
-  handover: document.getElementById('tab-handover'),
-  chemical: document.getElementById('tab-chemical'),
-  clock: document.getElementById('tab-clock')
-};
+function switchTab(which){
+  const panels = {
+    update: document.getElementById("tab-update"),
+    handover: document.getElementById("tab-handover"),
+    chemical: document.getElementById("tab-chemical"),
+    clock: document.getElementById("tab-clock"), // new
+  };
 
-const buttons = {
-  update: document.getElementById('btnUpdate'),
-  handover: document.getElementById('btnHandover'),
-  chemical: document.getElementById('btnChemical'),
-  clock: document.getElementById('btnClock')
-};
+  const buttons = {
+    update: document.getElementById("btnUpdate"),
+    handover: document.getElementById("btnHandover"),
+    chemical: document.getElementById("btnChemical"),
+    clock: document.getElementById("btnClock"), // new
+  };
 
-
-    Object.keys(panels).forEach(k => {
-      panels[k].style.display = (k === which) ? 'block' : 'none';
-      buttons[k].classList.toggle('active', k === which);
-    });
-
-    if (which === 'handover') refreshHandover();
+  // If someone clicks a tab that doesn't exist, don’t crash.
+  if (!panels[which]) {
+    toast(`ERROR: Tab "${which}" not found in HTML`, 4500);
+    return;
   }
+
+  Object.keys(panels).forEach(k => {
+    if (panels[k]) panels[k].style.display = (k === which) ? "block" : "none";
+    if (buttons[k]) buttons[k].classList.toggle("active", k === which);
+  });
+
+  if (which === "handover") {
+    // Only call if the function exists
+    if (typeof refreshHandover === "function") refreshHandover();
+  }
+}
+
 
   // ===== CHEM CALC (Excel-matching rules) =====
   function num(id){
