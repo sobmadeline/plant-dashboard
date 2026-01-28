@@ -262,18 +262,24 @@
     return "b-green";
   }
 
-  function systemKeyFromRow(row){
-    // Prefer the Sheet "System" column; fallback to component ID prefix
-    const sys = (row.system || "").trim();
-    if (sys) return sys.toUpperCase();
+function systemKeyFromRow(row){
+  const sys = (row.system || "").trim().toLowerCase();
 
-    const id = (row.id || "").trim().toUpperCase();
-    if (id.startsWith("PUMP")) return "PUMPS";
-    if (id.startsWith("FIL")) return "FILTERS";
-    if (id.startsWith("HEAT") || id.startsWith("SOLAR")) return "HEATING";
-    if (id.startsWith("UV")) return "UV";
-    return "OTHER";
-  }
+  if (sys === "pump" || sys === "pumps") return "PUMPS";
+  if (sys === "filtration" || sys === "filters") return "FILTERS";
+  if (sys === "heating") return "HEATING";
+  if (sys === "disinfection" || sys === "uv") return "UV";
+
+  // fallback to Component ID prefix
+  const id = (row.id || "").trim().toUpperCase();
+  if (id.startsWith("PUMP")) return "PUMPS";
+  if (id.startsWith("FIL")) return "FILTERS";
+  if (id.startsWith("HEAT")) return "HEATING";
+  if (id.startsWith("UV")) return "UV";
+
+  return "OTHER";
+}
+
 
   function prettySystemName(key){
     const k = String(key || "").toUpperCase();
