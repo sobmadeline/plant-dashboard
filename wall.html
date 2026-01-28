@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Plant Status – Wall</title>
+  <style>
+    :root{
+      --pindan:#C54B00;
+      --dark-turq:#004153;
+      --bg:#07141a;
+      --card:#0b2028;
+      --text:#f8fafc;
+      --muted:#cbd5e1;
+      --red:#b91c1c;
+      --amber:#ca8a04;
+      --green:#15803d;
+      --blue:#2563eb;
+      --line:#14313b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+    header{
+      background:var(--dark-turq);
+      padding:16px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+    .brand{display:flex;align-items:center;gap:14px}
+    .logo{
+      width:46px;height:46px;border-radius:10px;
+      background:var(--pindan);color:white;
+      display:flex;align-items:center;justify-content:center;
+      font-weight:800;letter-spacing:.5px;
+    }
+    .titles .h1{font-size:22px;font-weight:800}
+    .titles .h2{font-size:14px;opacity:.85;margin-top:2px}
+    .meta{font-size:14px;color:var(--muted);text-align:right;line-height:1.4}
+    .wrap{padding:16px 18px}
+    .tiles{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:12px;
+      margin-bottom:14px;
+    }
+    .tile{
+      border-radius:14px;
+      padding:16px;
+      background:var(--card);
+      border:1px solid var(--line);
+      min-height:92px;
+      display:flex;flex-direction:column;justify-content:space-between;
+    }
+    .tile .label{font-size:14px;color:var(--muted);font-weight:700}
+    .tile .value{font-size:34px;font-weight:900}
+    .tile.offline{background:linear-gradient(0deg, rgba(185,28,28,.25), rgba(185,28,28,.25)), var(--card)}
+    .tile.degraded{background:linear-gradient(0deg, rgba(202,138,4,.25), rgba(202,138,4,.25)), var(--card)}
+    .tile.ok{background:linear-gradient(0deg, rgba(21,128,61,.25), rgba(21,128,61,.25)), var(--card)}
+    .tile.maint{background:linear-gradient(0deg, rgba(37,99,235,.20), rgba(37,99,235,.20)), var(--card)}
+
+    .panel{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:14px;
+      overflow:hidden;
+    }
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:14px 14px;border-bottom:1px solid var(--line);font-size:18px}
+    th{background:#071d24;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:13px}
+    tr:last-child td{border-bottom:none}
+    .status-pill{
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:800;
+      font-size:14px;
+      letter-spacing:.02em;
+      border:1px solid var(--line);
+    }
+    .s-operational{background:rgba(21,128,61,.20);color:#bbf7d0}
+    .s-degraded{background:rgba(202,138,4,.22);color:#fde68a}
+    .s-offline{background:rgba(185,28,28,.22);color:#fecaca}
+    .s-planned{background:rgba(37,99,235,.18);color:#bfdbfe}
+
+    footer{
+      padding:10px 18px 14px;
+      color:var(--muted);
+      font-size:13px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      opacity:.9;
+    }
+
+    /* wall readability */
+    @media (max-width: 980px){
+      .tiles{grid-template-columns:repeat(2,1fr)}
+      th,td{font-size:16px}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">LOGO</div>
+    <div class="titles">
+      <div class="h1">LIVE PLANT STATUS</div>
+      <div class="h2">Aquatic Facility – 25m Pool</div>
+    </div>
+  </div>
+  <div class="meta">
+    <div id="lastUpdated">Last updated: —</div>
+    <div id="refreshedAt">Refreshed: —</div>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="tiles">
+    <div class="tile offline">
+      <div class="label">OFFLINE</div>
+      <div class="value" id="cntOffline">—</div>
+    </div>
+    <div class="tile degraded">
+      <div class="label">DEGRADED</div>
+      <div class="value" id="cntDegraded">—</div>
+    </div>
+    <div class="tile maint">
+      <div class="label">PLANNED</div>
+      <div class="value" id="cntPlanned">—</div>
+    </div>
+    <div class="tile ok">
+      <div class="label">OPERATIONAL</div>
+      <div class="value" id="cntOperational">—</div>
+    </div>
+  </section>
+
+  <div class="panel">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40%">Component</th>
+          <th style="width:20%">Status</th>
+          <th style="width:20%">Owner</th>
+          <th style="width:20%">Issue</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>
+  <div>Internal Operations Dashboard</div>
+  <div>Display only</div>
+</footer>
+
+<script>
+  // ✅ Paste your CSV URL here (see instructions above)
+  const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=0&single=true&output=csv";
+
+  const REFRESH_MS = 30000; // 30s wall refresh
+
+  function parseCSV(text){
+    // Basic CSV parser supporting quoted commas/newlines.
+    const rows = [];
+    let row = [], cur = "", inQuotes = false;
+
+    for (let i=0; i<text.length; i++){
+      const c = text[i];
+      const next = text[i+1];
+
+      if (c === '"' && inQuotes && next === '"') { cur += '"'; i++; continue; }
+      if (c === '"') { inQuotes = !inQuotes; continue; }
+
+      if (!inQuotes && c === ',') { row.push(cur); cur=""; continue; }
+      if (!inQuotes && (c === '\n' || c === '\r')) {
+        if (c === '\r' && next === '\n') i++;
+        row.push(cur); cur="";
+        // avoid pushing empty trailing row
+        if (row.some(v => v !== "")) rows.push(row);
+        row = [];
+        continue;
+      }
+      cur += c;
+    }
+    row.push(cur);
+    if (row.some(v => v !== "")) rows.push(row);
+    return rows;
+  }
+
+  function statusClass(status){
+    const s = (status || "").trim().toLowerCase();
+    if (s === "offline") return "s-offline";
+    if (s === "degraded") return "s-degraded";
+    if (s === "planned maintenance") return "s-planned";
+    return "s-operational";
+  }
+
+  function statusOrder(status){
+    const s = (status || "").trim().toLowerCase();
+    if (s === "offline") return 1;
+    if (s === "degraded") return 2;
+    if (s === "planned maintenance") return 3;
+    return 4; // operational/blank
+  }
+
+  function fmtTime(d){
+    return d.toLocaleString(undefined, { year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+  }
+
+  async function load(){
+    const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
+    if (!res.ok) throw new Error("Failed to fetch CSV: " + res.status);
+    const csv = await res.text();
+    const data = parseCSV(csv);
+    const headers = data[0];
+    const idx = (name) => headers.indexOf(name);
+
+    const iName = idx("Component Name");
+    const iStatus = idx("Status");
+    const iOwner = idx("Owner");
+    const iIssue = idx("Issue Summary");
+    const iUpdated = idx("Last Updated");
+
+    const items = data.slice(1).map(r => ({
+      name: r[iName] || "",
+      status: r[iStatus] || "",
+      owner: r[iOwner] || "",
+      issue: r[iIssue] || "",
+      updated: r[iUpdated] || ""
+    })).filter(x => x.name.trim() !== "");
+
+    // Counts
+    const counts = { offline:0, degraded:0, planned:0, operational:0 };
+    let maxUpdated = null;
+
+    for (const it of items){
+      const s = (it.status || "").trim().toLowerCase();
+      if (s === "offline") counts.offline++;
+      else if (s === "degraded") counts.degraded++;
+      else if (s === "planned maintenance") counts.planned++;
+      else counts.operational++;
+
+      const dt = new Date(it.updated);
+      if (!isNaN(dt) && (!maxUpdated || dt > maxUpdated)) maxUpdated = dt;
+    }
+
+    document.getElementById("cntOffline").textContent = counts.offline;
+    document.getElementById("cntDegraded").textContent = counts.degraded;
+    document.getElementById("cntPlanned").textContent = counts.planned;
+    document.getElementById("cntOperational").textContent = counts.operational;
+
+    document.getElementById("lastUpdated").textContent =
+      "Last updated: " + (maxUpdated ? fmtTime(maxUpdated) : "—");
+    document.getElementById("refreshedAt").textContent =
+      "Refreshed: " + fmtTime(new Date());
+
+    // Table sorted by status severity then name
+    items.sort((a,b) => {
+      const o = statusOrder(a.status) - statusOrder(b.status);
+      if (o !== 0) return o;
+      return a.name.localeCompare(b.name);
+    });
+
+    const tbody = document.getElementById("rows");
+    tbody.innerHTML = "";
+    for (const it of items){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><strong>${escapeHtml(it.name)}</strong></td>
+        <td><span class="status-pill ${statusClass(it.status)}">${escapeHtml(it.status || "Operational")}</span></td>
+        <td>${escapeHtml(it.owner)}</td>
+        <td>${escapeHtml(it.issue)}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  async function tick(){
+    try { await load(); }
+    catch(e){
+      console.error(e);
+      document.getElementById("refreshedAt").textContent = "Refreshed: ERROR";
+    }
+  }
+
+  tick();
+  setInterval(tick, REFRESH_MS);
+</script>
+</body>
+</html>
