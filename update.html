@@ -31,10 +31,17 @@
       width:40px;height:40px;border-radius:10px;
       background:var(--pindan);color:white;
       display:flex;align-items:center;justify-content:center;
-      font-weight:900;
+      font-weight:900;letter-spacing:.04em;
     }
     .h1{font-size:18px;font-weight:900;line-height:1.1}
     .h2{font-size:13px;opacity:.85;margin-top:2px}
+
+    .tabs{display:flex;gap:10px;padding:10px 14px;background:#06181f}
+    .tab{
+      flex:1;border:1px solid var(--line);background:var(--card);color:var(--text);
+      padding:12px;border-radius:14px;font-weight:900;font-size:16px
+    }
+    .tab.active{border-color:var(--pindan);box-shadow:0 0 0 2px rgba(197,75,0,.35)}
 
     .wrap{padding:14px 14px 20px}
     .card{
@@ -44,132 +51,180 @@
       padding:14px;
       margin-bottom:12px;
     }
-    label{display:block;font-size:13px;color:var(--muted);font-weight:700;margin:10px 0 6px}
+    label{display:block;font-size:13px;color:var(--muted);font-weight:800;margin:10px 0 6px}
     select, input, textarea{
       width:100%; padding:12px 12px;
       border-radius:12px; border:1px solid var(--line);
       background:#06181f; color:var(--text);
       font-size:16px;
     }
-    textarea{min-height:80px; resize:vertical}
+    textarea{min-height:90px; resize:vertical}
 
-    .btnrow{
-      display:grid;
-      grid-template-columns:repeat(2,1fr);
-      gap:10px;
-      margin-top:10px;
-    }
+    .btnrow{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:10px}
     .btn{
-      border:none;
-      border-radius:14px;
-      padding:14px 12px;
-      font-size:16px;
-      font-weight:900;
-      color:white;
-      cursor:pointer;
+      border:none;border-radius:14px;padding:14px 12px;
+      font-size:16px;font-weight:900;color:white;cursor:pointer
     }
     .b-good{background:var(--good)}
     .b-warn{background:var(--warn)}
     .b-bad{background:var(--bad)}
     .b-plan{background:var(--plan)}
+    .btn.selected{outline:3px solid #f8fafc;box-shadow:0 0 0 3px rgba(197,75,0,.55)}
+
     .submit{
-      width:100%;
-      margin-top:12px;
+      width:100%; margin-top:12px;
       background:var(--pindan);
       border:none;border-radius:14px;
       padding:14px 12px;
       color:white;font-weight:900;font-size:17px;
       cursor:pointer;
     }
+
+    .small{font-size:12px;color:var(--muted);margin-top:8px;font-weight:800}
+
+    .pill{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid var(--line);font-weight:900;font-size:12px;letter-spacing:.04em}
+
+    .noticeBox{border:1px solid var(--line);border-radius:14px;background:#06181f;padding:10px 12px;margin-top:10px}
+    .state{
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:#06181f;
+      font-weight:900;
+      line-height:1.25;
+    }
+    .state.active{border-color:var(--pindan);background:rgba(197,75,0,.12)}
+
     .toast{
       position:fixed;left:50%;transform:translateX(-50%);
-      bottom:14px;
-      background:#05212a;
-      border:1px solid var(--line);
-      padding:12px 14px;border-radius:14px;
-      max-width:92vw;
-      display:none;
-      font-weight:800;
+      bottom:14px;background:#05212a;border:1px solid var(--line);
+      padding:12px 14px;border-radius:14px;max-width:92vw;
+      display:none;font-weight:900;
     }
-    .small{font-size:12px;color:var(--muted);margin-top:8px}
-    .list table{width:100%;border-collapse:collapse}
-    .list th,.list td{padding:10px;border-bottom:1px solid var(--line);font-size:14px}
-    .pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--line);font-weight:900}
   </style>
 </head>
 <body>
-<header>
-  <div class="logo">LOGO</div>
-  <div>
-    <div class="h1">Update Plant Status</div>
-    <div class="h2">Aquatic Facility – 25m Pool</div>
+  <header>
+    <div class="logo">LOGO</div>
+    <div>
+      <div class="h1">Plant Dashboard</div>
+      <div class="h2">Aquatic Facility – 25m Pool</div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" id="btnUpdate" type="button" onclick="switchTab('update')">Update</button>
+    <button class="tab" id="btnHandover" type="button" onclick="switchTab('handover')">Handover</button>
   </div>
-</header>
 
-<div class="wrap">
+  <!-- UPDATE TAB -->
+  <div id="tab-update" class="wrap">
+    <div class="card">
+      <div style="font-weight:900;font-size:16px">Quick Update</div>
 
-  <div class="card">
-    <div style="font-weight:900;font-size:16px">Quick Update</div>
+      <label>Component</label>
+      <select id="component"></select>
 
-    <label>Component</label>
-    <select id="component"></select>
+      <label>Status</label>
+      <div class="btnrow" id="statusButtons">
+        <button class="btn b-good" type="button" data-status="Operational">Operational</button>
+        <button class="btn b-warn" type="button" data-status="Degraded">Degraded</button>
+        <button class="btn b-bad" type="button" data-status="Offline">Offline</button>
+        <button class="btn b-plan" type="button" data-status="Planned Maintenance">Planned</button>
+      </div>
 
-    <label>Status</label>
-    <div class="btnrow">
-      <button class="btn b-good" type="button" onclick="setStatus('Operational')">Operational</button>
-      <button class="btn b-warn" type="button" onclick="setStatus('Degraded')">Degraded</button>
-      <button class="btn b-bad" type="button" onclick="setStatus('Offline')">Offline</button>
-      <button class="btn b-plan" type="button" onclick="setStatus('Planned Maintenance')">Planned</button>
+      <div class="small" id="chosenStatus">Selected status: —</div>
+
+      <label>Condition</label>
+      <select id="condition">
+        <option value="">(optional)</option>
+        <option>Normal</option>
+        <option>Noise / Vibration</option>
+        <option>Reduced Flow</option>
+        <option>Pressure Issue</option>
+        <option>Leak Present</option>
+        <option>Electrical Fault</option>
+        <option>Under Investigation</option>
+      </select>
+
+      <label>Issue Summary</label>
+      <input id="summary" placeholder="e.g., Bearing noise on startup" />
+
+      <button class="submit" type="button" onclick="submitUpdate()">Save Update</button>
+      <div class="small">Tip: tap a status button before saving.</div>
     </div>
 
-    <label>Condition</label>
-    <select id="condition">
-      <option value="">(optional)</option>
-      <option>Normal</option>
-      <option>Noise / Vibration</option>
-      <option>Reduced Flow</option>
-      <option>Pressure Issue</option>
-      <option>Leak Present</option>
-      <option>Electrical Fault</option>
-      <option>Under Investigation</option>
-    </select>
-
-    <label>Issue Summary</label>
-    <input id="summary" placeholder="e.g., Bearing noise on startup" />
-
-    <div class="small" id="chosenStatus">Selected status: —</div>
-
-    <button class="submit" onclick="submitUpdate()">Save Update</button>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+        <div style="font-weight:900;font-size:16px">Current Status (read-only)</div>
+        <span class="pill">Auto refresh</span>
+      </div>
+      <div id="statusList" class="small" style="margin-top:10px">Loading…</div>
+    </div>
   </div>
 
-  <div class="card list">
-    <div style="font-weight:900;font-size:16px;margin-bottom:8px">Current Status (read-only)</div>
-    <table>
-      <thead>
-        <tr><th>Component</th><th>Status</th></tr>
-      </thead>
-      <tbody id="list"></tbody>
-    </table>
+  <!-- HANDOVER TAB -->
+  <div id="tab-handover" class="wrap" style="display:none">
+    <div class="card">
+      <div style="font-weight:900;font-size:18px;margin-bottom:8px">Shift Handover</div>
+
+      <div id="handoverState" class="state">Loading handover…</div>
+
+      <div class="noticeBox" style="margin-top:12px">
+        <div style="font-weight:900">Plant summary</div>
+        <div class="small">Non-operational / attention required</div>
+        <div id="plantSummary"></div>
+      </div>
+
+      <label style="margin-top:12px">Viewing notices for</label>
+      <select id="audience">
+        <option>All</option>
+        <option>Duty Manager</option>
+        <option>Ops</option>
+        <option>Maintenance</option>
+      </select>
+
+      <div class="noticeBox" style="margin-top:10px">
+        <div style="font-weight:900">Relevant notices</div>
+        <div id="handoverNotices"></div>
+      </div>
+
+      <label style="margin-top:12px">New handover message</label>
+      <textarea id="handoverMsg" placeholder="Add context or actions for the next shift (optional if the summary above is sufficient)"></textarea>
+
+      <button class="submit" type="button" onclick="setHandover()">Set handover</button>
+      <button class="submit" type="button" style="background:var(--plan);margin-top:8px" onclick="ackHandover()">Acknowledge handover</button>
+
+      <div class="small" style="margin-top:10px">
+        Future: this handover can be emailed automatically (via Apps Script) to incoming staff.
+      </div>
+    </div>
   </div>
 
-</div>
-
-<div class="toast" id="toast"></div>
+  <div class="toast" id="toast"></div>
 
 <script>
-  // ✅ Paste your CSV URL here (same as wall.html)
-  const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=0&single=true&output=csv";
+  // === LIVE DATA URLS (already filled) ===
+  const PLANT_CSV_URL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=0&single=true&output=csv";
 
-  // ✅ Your working Apps Script Web App URL (WRITE)
-  const WRITE_URL = "https://script.google.com/macros/s/AKfycbzAQ3ZDxtE-WHc-HxDIFbbDMPJMqyXf6K1qtt5pCaQBPPgA1gvLid8v7gvx9jnerBHJlg/exec";
+  const NOTICE_CSV_URL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=684780974&single=true&output=csv";
 
-  let cached = [];
-  let selectedStatus = "";
+  const HANDOVER_CSV_URL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=871823190&single=true&output=csv";
 
-  function setStatus(s){
-    selectedStatus = s;
-    document.getElementById("chosenStatus").textContent = "Selected status: " + s;
-    toast("Status set to: " + s, 1200);
+  // Your current Apps Script web app endpoint (WRITE)
+  const WRITE_URL =
+    "https://script.google.com/macros/s/AKfycbzAQ3ZDxtE-WHc-HxDIFbbDMPJMqyXf6K1qtt5pCaQBPPgA1gvLid8v7gvx9jnerBHJlg/exec";
+
+  let cached = [];            // Plant items cached after load()
+  let selectedStatus = "";    // Set by status buttons
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[c]));
   }
 
   function toast(msg, ms=1800){
@@ -205,8 +260,32 @@
     return rows;
   }
 
-  async function load(){
-    const res = await fetch(SHEET_CSV_URL, { cache:"no-store" });
+  function rankStatus(s){
+    s = (s || "").trim().toLowerCase();
+    if (s === "offline") return 1;
+    if (s === "degraded") return 2;
+    if (s === "planned maintenance") return 3;
+    return 4;
+  }
+
+  function isActiveNotice(startStr, endStr){
+    const now = new Date();
+    const start = startStr ? new Date(startStr) : null;
+    const end = endStr ? new Date(endStr) : null;
+    const okStart = !startStr || (!isNaN(start) && start <= now);
+    const okEnd = !endStr || (!isNaN(end) && end >= now);
+    return okStart && okEnd;
+  }
+
+  function audienceMatches(audienceCell, selected){
+    const raw = (audienceCell || "").trim();
+    if (!raw || raw.toLowerCase() === "all") return true;
+    const parts = raw.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+    return parts.includes(String(selected).trim().toLowerCase()) || parts.includes("all");
+  }
+
+  async function loadPlant(){
+    const res = await fetch(PLANT_CSV_URL, { cache:"no-store" });
     const csv = await res.text();
     const data = parseCSV(csv);
     const headers = data[0];
@@ -215,70 +294,226 @@
     const iId = idx("Component ID");
     const iName = idx("Component Name");
     const iStatus = idx("Status");
+    const iIssue = idx("Issue Summary");
 
     const items = data.slice(1).map(r => ({
       id: (r[iId] || "").trim(),
       name: (r[iName] || "").trim(),
-      status: (r[iStatus] || "").trim()
+      status: (r[iStatus] || "").trim(),
+      issue: (r[iIssue] || "").trim()
     })).filter(x => x.id && x.name);
 
     cached = items;
 
-    // Populate component dropdown
+    // Populate dropdown
     const sel = document.getElementById("component");
-    sel.innerHTML = items.map(x => `<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)} (${escapeHtml(x.id)})</option>`).join("");
+    sel.innerHTML = items.map(x =>
+      `<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)} (${escapeHtml(x.id)})</option>`
+    ).join("");
 
-    // Populate list
-    const tbody = document.getElementById("list");
-    tbody.innerHTML = "";
-    for (const it of items){
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td>${escapeHtml(it.name)}</td><td><span class="pill">${escapeHtml(it.status || "Operational")}</span></td>`;
-      tbody.appendChild(tr);
-    }
+    // Render read-only list (compact)
+    const list = items
+      .slice()
+      .sort((a,b) => rankStatus(a.status) - rankStatus(b.status) || a.name.localeCompare(b.name))
+      .map(it => `• ${it.name}: ${it.status || "Operational"}`)
+      .join("<br>");
+
+    document.getElementById("statusList").innerHTML = list || "No data";
+  }
+
+  function wireStatusButtons(){
+    document.querySelectorAll("#statusButtons .btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        selectedStatus = btn.dataset.status || "";
+        document.getElementById("chosenStatus").textContent = "Selected status: " + selectedStatus;
+
+        document.querySelectorAll("#statusButtons .btn").forEach(b => b.classList.remove("selected"));
+        btn.classList.add("selected");
+      });
+    });
   }
 
   async function submitUpdate(){
-    const componentId = document.getElementById("component").value;
-    const condition = document.getElementById("condition").value;
-    const summary = document.getElementById("summary").value;
-    const owner = document.getElementById("owner").value;
+    try{
+      const componentId = document.getElementById("component").value;
+      const condition = document.getElementById("condition").value;
+      const summary = document.getElementById("summary").value;
 
-    if (!componentId) return toast("Pick a component first.");
-    if (!selectedStatus) return toast("Tap a Status button first.");
+      if (!componentId) return toast("Pick a component first.");
+      if (!selectedStatus) return toast("Tap a Status button first.");
 
-    // Write uses form-style POST to avoid preflight/CORS pain
-    const body = new URLSearchParams({
-      componentId,
-      status: selectedStatus,
-      condition,
-      summary,
-      owner
-    });
+      const body = new URLSearchParams({
+        // keep default action in your script OR explicitly set:
+        action: "updateComponent",
+        componentId,
+        status: selectedStatus,
+        condition,
+        summary
+      });
 
-    toast("Saving…", 1200);
+      toast("Saving…", 1500);
+      const res = await fetch(WRITE_URL, { method:"POST", body });
+      const text = await res.text();
+
+      if (!res.ok || !String(text).startsWith("OK")) {
+        console.error(text);
+        return toast("Save failed. Check connection / script.", 3000);
+      }
+
+      toast(text, 2000);
+      document.getElementById("summary").value = "";
+      await loadPlant(); // refresh cached + list
+    } catch(e){
+      console.error(e);
+      toast("Save failed (network/browser error)", 3200);
+    }
+  }
+
+  function buildPlantSummary(){
+    const nonOp = cached
+      .filter(it => rankStatus(it.status) <= 3 && (it.status || "").trim().toLowerCase() !== "operational")
+      .sort((a,b) => rankStatus(a.status) - rankStatus(b.status));
+
+    if (!nonOp.length){
+      return `<ul class="small" style="margin:8px 0 0 18px"><li>No non-operational items</li></ul>`;
+    }
+
+    return `<ul class="small" style="margin:8px 0 0 18px">` + nonOp.map(it =>
+      `<li><strong>${escapeHtml(it.name)}</strong> — ${escapeHtml(it.status)}${it.issue ? " • " + escapeHtml(it.issue) : ""}</li>`
+    ).join("") + `</ul>`;
+  }
+
+  async function loadNoticesForHandover(){
+    const selected = document.getElementById("audience").value;
+
+    const res = await fetch(NOTICE_CSV_URL, { cache:"no-store" });
+    const csv = await res.text();
+    const rows = parseCSV(csv);
+    const headers = rows[0];
+    const idx = (n) => headers.indexOf(n);
+
+    const iTitle = idx("Title");
+    const iMsg = idx("Message");
+    const iStart = idx("Start");
+    const iEnd = idx("End");
+    const iAud = idx("Audience");
+
+    const items = rows.slice(1).map(r => ({
+      title: (r[iTitle] || "").trim(),
+      msg: (r[iMsg] || "").trim(),
+      start: (r[iStart] || "").trim(),
+      end: (r[iEnd] || "").trim(),
+      aud: (r[iAud] || "").trim()
+    })).filter(x => x.title || x.msg);
+
+    const active = items
+      .filter(n => isActiveNotice(n.start, n.end))
+      .filter(n => audienceMatches(n.aud, selected))
+      .slice(0, 6);
+
+    if (!active.length){
+      return `<ul class="small" style="margin:8px 0 0 18px"><li>No active notices for ${escapeHtml(selected)}</li></ul>`;
+    }
+
+    return `<ul class="small" style="margin:8px 0 0 18px">` + active.map(n =>
+      `<li><strong>${escapeHtml(n.title || "Notice")}</strong>${n.msg ? " — " + escapeHtml(n.msg) : ""}</li>`
+    ).join("") + `</ul>`;
+  }
+
+  async function refreshHandover(){
+    try{
+      // Handover state
+      const res = await fetch(HANDOVER_CSV_URL, { cache:"no-store" });
+      const csv = await res.text();
+      const data = parseCSV(csv);
+      const headers = data[0];
+      const row = data[1] || [];
+      const idx = (n) => headers.indexOf(n);
+
+      const active = (row[idx("Active")] || "").trim().toLowerCase();
+      const msg = (row[idx("Message")] || "").trim();
+      const created = (row[idx("Created")] || "").trim();
+      const ack = (row[idx("Acknowledged")] || "").trim().toLowerCase();
+
+      const state = document.getElementById("handoverState");
+      if (active === "yes" && ack !== "yes" && msg){
+        state.classList.add("active");
+        state.innerHTML = `Active handover<div class="small" style="margin-top:6px">${escapeHtml(msg)}<br><span style="opacity:.85">Created: ${escapeHtml(created)}</span></div>`;
+      } else {
+        state.classList.remove("active");
+        state.innerHTML = `No active handover<div class="small" style="margin-top:6px;opacity:.9">Nothing pending for the next shift.</div>`;
+      }
+
+      // Plant summary + notices snapshot
+      document.getElementById("plantSummary").innerHTML = buildPlantSummary();
+      document.getElementById("handoverNotices").innerHTML = await loadNoticesForHandover();
+
+    } catch(e){
+      console.error(e);
+      document.getElementById("handoverState").textContent = "Could not load handover.";
+      document.getElementById("plantSummary").innerHTML = "";
+      document.getElementById("handoverNotices").innerHTML = "";
+    }
+  }
+
+  async function setHandover(){
+    const message = document.getElementById("handoverMsg").value.trim();
+    if (!message) return toast("Enter a short handover message first.");
+
+    const body = new URLSearchParams({ action:"setHandover", message });
+    toast("Setting handover…", 1500);
 
     const res = await fetch(WRITE_URL, { method:"POST", body });
     const text = await res.text();
 
-    if (!res.ok || !String(text).startsWith("OK")) {
+    if (!String(text).startsWith("OK")) {
       console.error(text);
-      return toast("Save failed. Check connection.", 2200);
+      return toast("Failed to set handover.", 3000);
     }
 
-    toast("Saved ✅", 1600);
-    // refresh list
-    await load();
-    document.getElementById("summary").value = "";
+    toast("Handover set ✅", 2000);
+    document.getElementById("handoverMsg").value = "";
+    await refreshHandover();
   }
 
-  function escapeHtml(s){
-    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
-    }[c]));
+  async function ackHandover(){
+    const body = new URLSearchParams({ action:"ackHandover" });
+    toast("Acknowledging…", 1500);
+
+    const res = await fetch(WRITE_URL, { method:"POST", body });
+    const text = await res.text();
+
+    if (!String(text).startsWith("OK")) {
+      console.error(text);
+      return toast("Failed to acknowledge.", 3000);
+    }
+
+    toast("Acknowledged ✅", 2000);
+    await refreshHandover();
   }
 
-  load().catch(err => {
+  function switchTab(which){
+    const u = document.getElementById('tab-update');
+    const h = document.getElementById('tab-handover');
+    const bu = document.getElementById('btnUpdate');
+    const bh = document.getElementById('btnHandover');
+
+    const onUpdate = which === 'update';
+    u.style.display = onUpdate ? 'block' : 'none';
+    h.style.display = onUpdate ? 'none' : 'block';
+    bu.classList.toggle('active', onUpdate);
+    bh.classList.toggle('active', !onUpdate);
+
+    if (!onUpdate) refreshHandover();
+  }
+
+  // Boot
+  wireStatusButtons();
+  loadPlant().then(() => {
+    // Keep notices current on handover tab when audience changes
+    const aud = document.getElementById("audience");
+    if (aud) aud.addEventListener("change", refreshHandover);
+  }).catch(err => {
     console.error(err);
     toast("Could not load sheet data", 2500);
   });
