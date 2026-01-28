@@ -17,6 +17,7 @@
       --warn:#ca8a04;
       --bad:#b91c1c;
       --plan:#2563eb;
+      --teal:#0f766e;
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
@@ -79,6 +80,8 @@
       color:white;font-weight:900;font-size:17px;
       cursor:pointer;
     }
+    .submit.secondary{background:var(--plan)}
+    .submit.teal{background:var(--teal)}
 
     .small{font-size:12px;color:var(--muted);margin-top:8px;font-weight:800}
 
@@ -100,6 +103,12 @@
       bottom:14px;background:#05212a;border:1px solid var(--line);
       padding:12px 14px;border-radius:14px;max-width:92vw;
       display:none;font-weight:900;
+      z-index:999;
+    }
+
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width: 540px){
+      .grid2{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -115,6 +124,7 @@
   <div class="tabs">
     <button class="tab active" id="btnUpdate" type="button" onclick="switchTab('update')">Update</button>
     <button class="tab" id="btnHandover" type="button" onclick="switchTab('handover')">Handover</button>
+    <button class="tab" id="btnChemical" type="button" onclick="switchTab('chemical')">Chemical</button>
   </div>
 
   <!-- UPDATE TAB -->
@@ -193,10 +203,87 @@
       <textarea id="handoverMsg" placeholder="Add context or actions for the next shift (optional if the summary above is sufficient)"></textarea>
 
       <button class="submit" type="button" onclick="setHandover()">Set handover</button>
-      <button class="submit" type="button" style="background:var(--plan);margin-top:8px" onclick="ackHandover()">Acknowledge handover</button>
+      <button class="submit secondary" type="button" style="margin-top:8px" onclick="ackHandover()">Acknowledge handover</button>
 
       <div class="small" style="margin-top:10px">
-        Future: this handover can be emailed automatically (via Apps Script) to incoming staff.
+        Tip: Use handover only for items that must carry into the next shift.
+      </div>
+    </div>
+  </div>
+
+  <!-- CHEMICAL TAB -->
+  <div id="tab-chemical" class="wrap" style="display:none">
+    <div class="card">
+      <div style="font-weight:900;font-size:18px;margin-bottom:8px">Chemical calculations</div>
+      <div class="small">Based on BRAC Aquatic Chemical Calculator (Excel). Default volume is 1,000,000 L.</div>
+
+      <label>Pool volume</label>
+      <div class="grid2">
+        <input id="chemVol" inputmode="decimal" placeholder="1000" value="1000" />
+        <select id="chemVolUnit">
+          <option value="kL" selected>kL</option>
+          <option value="L">L</option>
+        </select>
+      </div>
+      <div class="small">1000 kL = 1,000,000 L</div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:900;font-size:16px;margin-bottom:6px">Current levels</div>
+
+      <label>Free Chlorine (ppm)</label>
+      <input id="curFC" inputmode="decimal" placeholder="e.g., 4.9" />
+
+      <label>pH</label>
+      <input id="curPH" inputmode="decimal" placeholder="e.g., 7.65" />
+
+      <label>Alkalinity (ppm)</label>
+      <input id="curALK" inputmode="decimal" placeholder="e.g., 45" />
+
+      <label>Cyanuric Acid (ppm)</label>
+      <input id="curCYA" inputmode="decimal" placeholder="e.g., 17" />
+
+      <label>Calcium Hardness (ppm)</label>
+      <input id="curCH" inputmode="decimal" placeholder="optional" />
+    </div>
+
+    <div class="card">
+      <div style="font-weight:900;font-size:16px;margin-bottom:6px">Targets</div>
+
+      <label>Free Chlorine target (ppm)</label>
+      <input id="tFC" inputmode="decimal" value="6" />
+
+      <label>pH target</label>
+      <input id="tPH" inputmode="decimal" value="7.5" />
+
+      <label>Alkalinity target (ppm)</label>
+      <input id="tALK" inputmode="decimal" value="90" />
+
+      <label>Cyanuric Acid target (ppm)</label>
+      <input id="tCYA" inputmode="decimal" value="45" />
+
+      <label>Calcium Hardness target (ppm)</label>
+      <input id="tCH" inputmode="decimal" value="120" />
+
+      <button class="submit" type="button" onclick="runChem()">Calculate</button>
+      <button class="submit secondary" type="button" style="margin-top:8px" onclick="copyChemNotes(false)">Copy to notes</button>
+      <button class="submit teal" type="button" style="margin-top:8px" onclick="copyChemNotes(true)">Copy + add to handover</button>
+
+      <div class="small">Tip: “Copy + add to handover” appends the dosing block into the Handover message box.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:900;font-size:16px;margin-bottom:6px">Dose results</div>
+      <div id="chemResults" class="small">Enter values and press Calculate.</div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:900;font-size:16px;margin-bottom:6px">Safety reminders</div>
+      <div class="small">
+        • Follow facility SOP + SDS for handling/dosing.<br>
+        • Add chemical to water where applicable (never water to chemical).<br>
+        • Don’t exceed max dosing limits if your SOP has them.<br>
+        • Record dosing where required.
       </div>
     </div>
   </div>
@@ -204,7 +291,7 @@
   <div class="toast" id="toast"></div>
 
 <script>
-  // === LIVE DATA URLS (already filled) ===
+  // === LIVE DATA URLS ===
   const PLANT_CSV_URL =
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=0&single=true&output=csv";
 
@@ -214,12 +301,13 @@
   const HANDOVER_CSV_URL =
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=871823190&single=true&output=csv";
 
-  // Your current Apps Script web app endpoint (WRITE)
+  // Your Apps Script web app endpoint (WRITE)
   const WRITE_URL =
     "https://script.google.com/macros/s/AKfycbzAQ3ZDxtE-WHc-HxDIFbbDMPJMqyXf6K1qtt5pCaQBPPgA1gvLid8v7gvx9jnerBHJlg/exec";
 
   let cached = [];            // Plant items cached after load()
   let selectedStatus = "";    // Set by status buttons
+  let chemLast = null;        // Last chemical calculation snapshot
 
   function escapeHtml(s){
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -343,7 +431,6 @@
       if (!selectedStatus) return toast("Tap a Status button first.");
 
       const body = new URLSearchParams({
-        // keep default action in your script OR explicitly set:
         action: "updateComponent",
         componentId,
         status: selectedStatus,
@@ -362,7 +449,7 @@
 
       toast(text, 2000);
       document.getElementById("summary").value = "";
-      await loadPlant(); // refresh cached + list
+      await loadPlant();
     } catch(e){
       console.error(e);
       toast("Save failed (network/browser error)", 3200);
@@ -422,7 +509,6 @@
 
   async function refreshHandover(){
     try{
-      // Handover state
       const res = await fetch(HANDOVER_CSV_URL, { cache:"no-store" });
       const csv = await res.text();
       const data = parseCSV(csv);
@@ -444,10 +530,8 @@
         state.innerHTML = `No active handover<div class="small" style="margin-top:6px;opacity:.9">Nothing pending for the next shift.</div>`;
       }
 
-      // Plant summary + notices snapshot
       document.getElementById("plantSummary").innerHTML = buildPlantSummary();
       document.getElementById("handoverNotices").innerHTML = await loadNoticesForHandover();
-
     } catch(e){
       console.error(e);
       document.getElementById("handoverState").textContent = "Could not load handover.";
@@ -493,24 +577,243 @@
   }
 
   function switchTab(which){
-    const u = document.getElementById('tab-update');
-    const h = document.getElementById('tab-handover');
-    const bu = document.getElementById('btnUpdate');
-    const bh = document.getElementById('btnHandover');
+    const panels = {
+      update: document.getElementById('tab-update'),
+      handover: document.getElementById('tab-handover'),
+      chemical: document.getElementById('tab-chemical')
+    };
 
-    const onUpdate = which === 'update';
-    u.style.display = onUpdate ? 'block' : 'none';
-    h.style.display = onUpdate ? 'none' : 'block';
-    bu.classList.toggle('active', onUpdate);
-    bh.classList.toggle('active', !onUpdate);
+    const buttons = {
+      update: document.getElementById('btnUpdate'),
+      handover: document.getElementById('btnHandover'),
+      chemical: document.getElementById('btnChemical')
+    };
 
-    if (!onUpdate) refreshHandover();
+    Object.keys(panels).forEach(k => {
+      panels[k].style.display = (k === which) ? 'block' : 'none';
+      buttons[k].classList.toggle('active', k === which);
+    });
+
+    if (which === 'handover') refreshHandover();
+  }
+
+  // ===== CHEM CALC (Excel-matching rules) =====
+  function num(id){
+    const v = document.getElementById(id)?.value;
+    const n = parseFloat(String(v ?? "").replace(/,/g,"").trim());
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  function roundup(x, decimals){
+    if (!Number.isFinite(x)) return NaN;
+    const m = Math.pow(10, decimals);
+    return Math.ceil(x * m) / m;
+  }
+
+  function poolLitres(){
+    const v = num("chemVol");
+    const unit = document.getElementById("chemVolUnit").value;
+    if (!Number.isFinite(v) || v <= 0) return NaN;
+    return unit === "kL" ? v * 1000 : v;
+  }
+
+  function pureKg(deltaPpm, volL){
+    return (deltaPpm * volL) / 1000000;
+  }
+
+  function fmt(x, suffix){
+    if (!Number.isFinite(x)) return "—";
+    return `${x.toLocaleString(undefined,{maximumFractionDigits:2})}${suffix||""}`;
+  }
+
+  function line(title, value){
+    return `<div style="margin:6px 0"><strong>${escapeHtml(title)}:</strong> ${escapeHtml(value)}</div>`;
+  }
+
+  function nowStamp(){
+    const d = new Date();
+    return d.toLocaleString(undefined,{year:"numeric",month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+  }
+
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return ok;
+    }
+  }
+
+  function buildChemNotes(){
+    if (!chemLast) return "";
+
+    const lines = [];
+    lines.push(`CHEM CALC (${chemLast.volumeKL} kL)`);
+    if (chemLast.fc){
+      lines.push(`FC: ${chemLast.fc.cur} → ${chemLast.fc.tgt} | Dose: ${chemLast.fc.hypoL} L sodium hypo (10.42%) | ${fmt(chemLast.fc.calHypoKg," kg")} cal hypo (62.5%)`);
+    }
+    if (chemLast.ph){
+      lines.push(`pH: ${chemLast.ph.cur} → ${chemLast.ph.tgt} | Dose: ${chemLast.ph.acidL} L sulphuric acid (Excel rule)`);
+    }
+    if (chemLast.alk){
+      lines.push(`ALK: ${chemLast.alk.cur} → ${chemLast.alk.tgt} | Dose: ${fmt(chemLast.alk.bicarbKg," kg")} sodium bicarb`);
+    }
+    if (chemLast.cya){
+      lines.push(`CYA: ${chemLast.cya.cur} → ${chemLast.cya.tgt} | Dose: ${chemLast.cya.cyaKg} kg cyanuric acid`);
+    }
+    if (chemLast.ch){
+      lines.push(`CH: ${chemLast.ch.cur} → ${chemLast.ch.tgt} | Dose: ${chemLast.ch.caCl2Kg} kg calcium chloride (91%)`);
+    }
+    if (chemLast.thioKg !== null){
+      lines.push(`If reducing FC: Thiosulphate (Excel rule): ${fmt(chemLast.thioKg," kg")}`);
+    }
+    lines.push(`Timestamp: ${nowStamp()}`);
+    return lines.join("\n");
+  }
+
+  async function copyChemNotes(addToHandover=false){
+    if (!chemLast) return toast("Run Calculate first.", 2000);
+
+    const text = buildChemNotes();
+    const ok = await copyText(text);
+
+    if (addToHandover){
+      switchTab("handover");
+      const box = document.getElementById("handoverMsg");
+      if (box){
+        box.value = (box.value.trim() ? box.value.trim() + "\n\n" : "") + text;
+      }
+      await refreshHandover();
+    }
+
+    toast(ok ? "Copied ✅" : "Copy failed (browser)", 2200);
+  }
+
+  function runChem(){
+    const V = poolLitres();
+    if (!Number.isFinite(V)) return toast("Enter a valid pool volume.", 2200);
+
+    const volumeKL = Math.round(V / 1000);
+
+    // Current
+    const curFC = num("curFC");
+    const curPH = num("curPH");
+    const curALK = num("curALK");
+    const curCYA = num("curCYA");
+    const curCH = num("curCH");
+
+    // Targets
+    const tFC = num("tFC");
+    const tPH = num("tPH");
+    const tALK = num("tALK");
+    const tCYA = num("tCYA");
+    const tCH = num("tCH");
+
+    let out = "";
+    const snap = { volumeKL, fc:null, ph:null, alk:null, cya:null, ch:null, thioKg:null };
+
+    // Chlorine (shows both products)
+    if (Number.isFinite(curFC) && Number.isFinite(tFC)) {
+      const d = tFC - curFC;
+      const Fkg = pureKg(d, V);
+
+      // Sodium Hypochlorite: 10.42%, density 1.2 kg/L, round up to whole L
+      const strengthHypo = 10.42 / 100;
+      const densityHypo = 1.2;
+      const Lhypo = (Fkg / strengthHypo) / densityHypo;
+      const LhypoOut = roundup(Math.max(Lhypo, 0), 0);
+
+      // Calcium Hypochlorite: 62.5% (kg)
+      const strengthCal = 62.5 / 100;
+      const kgCal = Math.max(Fkg / strengthCal, 0);
+
+      out += `<div style="margin-top:10px;font-weight:900">Chlorine</div>`;
+      out += line("Sodium Hypochlorite (10.42%)", fmt(LhypoOut, " L"));
+      out += line("Calcium Hypochlorite (62.5%)", fmt(kgCal, " kg"));
+
+      // Thiosulphate (Excel rule)
+      const thioKg = Math.max((curFC - tFC) / 1, 0);
+      snap.thioKg = thioKg;
+
+      snap.fc = { cur: curFC, tgt: tFC, hypoL: LhypoOut, calHypoKg: kgCal };
+    } else {
+      out += `<div style="margin-top:10px;font-weight:900">Chlorine</div>`;
+      out += `<div class="small">Enter current + target Free Chlorine to calculate.</div>`;
+      snap.thioKg = null;
+    }
+
+    // pH / Sulphuric Acid (Excel rule)
+    if (Number.isFinite(curPH) && Number.isFinite(tPH)) {
+      const steps = Math.max((curPH - tPH) / 0.1, 0);
+      const acidL = roundup(steps * 10 * V / 1000000, 1);
+
+      out += `<div style="margin-top:14px;font-weight:900">pH</div>`;
+      out += line("Sulphuric Acid (Excel rule)", fmt(acidL, " L"));
+
+      snap.ph = { cur: curPH, tgt: tPH, acidL };
+    } else {
+      out += `<div style="margin-top:14px;font-weight:900">pH</div>`;
+      out += `<div class="small">Enter current + target pH to calculate.</div>`;
+    }
+
+    // Alkalinity / Sodium Bicarbonate
+    if (Number.isFinite(curALK) && Number.isFinite(tALK)) {
+      const d = tALK - curALK;
+      const kg = Math.max(pureKg(d, V), 0);
+
+      out += `<div style="margin-top:14px;font-weight:900">Alkalinity</div>`;
+      out += line("Sodium Bicarbonate", fmt(kg, " kg"));
+
+      snap.alk = { cur: curALK, tgt: tALK, bicarbKg: kg };
+    } else {
+      out += `<div style="margin-top:14px;font-weight:900">Alkalinity</div>`;
+      out += `<div class="small">Enter current + target alkalinity to calculate.</div>`;
+    }
+
+    // Cyanuric Acid (round up to whole kg)
+    if (Number.isFinite(curCYA) && Number.isFinite(tCYA)) {
+      const d = tCYA - curCYA;
+      const kg = roundup(Math.max(pureKg(d, V), 0), 0);
+
+      out += `<div style="margin-top:14px;font-weight:900">Cyanuric Acid</div>`;
+      out += line("Cyanuric Acid", fmt(kg, " kg"));
+
+      snap.cya = { cur: curCYA, tgt: tCYA, cyaKg: kg };
+    } else {
+      out += `<div style="margin-top:14px;font-weight:900">Cyanuric Acid</div>`;
+      out += `<div class="small">Enter current + target CYA to calculate.</div>`;
+    }
+
+    // Calcium Hardness / Calcium Chloride (91%) round up to 0.1 kg
+    if (Number.isFinite(curCH) && Number.isFinite(tCH)) {
+      const d = tCH - curCH;
+      const Fkg = pureKg(d, V);
+      const strength = 0.91;
+      const kg = roundup(Math.max(Fkg / strength, 0), 1);
+
+      out += `<div style="margin-top:14px;font-weight:900">Calcium Hardness</div>`;
+      out += line("Calcium Chloride (91%)", fmt(kg, " kg"));
+
+      snap.ch = { cur: curCH, tgt: tCH, caCl2Kg: kg };
+    } else {
+      out += `<div style="margin-top:14px;font-weight:900">Calcium Hardness</div>`;
+      out += `<div class="small">Enter current + target calcium hardness to calculate.</div>`;
+    }
+
+    document.getElementById("chemResults").innerHTML = out;
+    chemLast = snap;
+    toast("Calculated ✅", 1200);
   }
 
   // Boot
   wireStatusButtons();
   loadPlant().then(() => {
-    // Keep notices current on handover tab when audience changes
     const aud = document.getElementById("audience");
     if (aud) aud.addEventListener("change", refreshHandover);
   }).catch(err => {
