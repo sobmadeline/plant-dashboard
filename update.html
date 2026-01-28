@@ -567,10 +567,10 @@ if (!String(text).startsWith("OK")) {
     const res = await fetch(WRITE_URL, { method:"POST", body });
     const text = await res.text();
 
-    if (!String(text).startsWith("OK")) {
-      console.error(text);
-      return toast("Failed to acknowledge.", 3000);
-    }
+if (!String(text).startsWith("OK")) {
+  console.error(text);
+  return toast(text, 4500);
+}
 
     toast("Acknowledged ✅", 2000);
     await refreshHandover();
