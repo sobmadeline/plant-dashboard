@@ -12,14 +12,16 @@
       --card:#0b2028;
       --text:#f8fafc;
       --muted:#cbd5e1;
+      --line:#14313b;
+
       --red:#b91c1c;
       --amber:#ca8a04;
       --green:#15803d;
       --blue:#2563eb;
-      --line:#14313b;
     }
     *{box-sizing:border-box}
     body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+
     header{
       background:var(--dark-turq);
       padding:16px 18px;
@@ -33,137 +35,176 @@
       width:46px;height:46px;border-radius:10px;
       background:var(--pindan);color:white;
       display:flex;align-items:center;justify-content:center;
-      font-weight:800;letter-spacing:.5px;
+      font-weight:900;letter-spacing:.04em;
     }
-    .titles .h1{font-size:22px;font-weight:800}
+    .titles .h1{font-size:22px;font-weight:900}
     .titles .h2{font-size:14px;opacity:.85;margin-top:2px}
     .meta{font-size:14px;color:var(--muted);text-align:right;line-height:1.4}
-    .wrap{padding:16px 18px}
-    .tiles{
-      display:grid;
-      grid-template-columns:repeat(4,1fr);
-      gap:12px;
-      margin-bottom:14px;
-    }
+
+    .wrap{padding:16px 18px 14px}
+
+    /* Top tiles */
+    .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
     .tile{
-      border-radius:14px;
-      padding:16px;
       background:var(--card);
       border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px 16px;
       min-height:92px;
       display:flex;flex-direction:column;justify-content:space-between;
     }
-    .tile .label{font-size:14px;color:var(--muted);font-weight:700}
+    .tile .label{font-size:13px;color:var(--muted);font-weight:900;letter-spacing:.06em}
     .tile .value{font-size:34px;font-weight:900}
     .tile.offline{background:linear-gradient(0deg, rgba(185,28,28,.25), rgba(185,28,28,.25)), var(--card)}
     .tile.degraded{background:linear-gradient(0deg, rgba(202,138,4,.25), rgba(202,138,4,.25)), var(--card)}
-    .tile.ok{background:linear-gradient(0deg, rgba(21,128,61,.25), rgba(21,128,61,.25)), var(--card)}
-    .tile.maint{background:linear-gradient(0deg, rgba(37,99,235,.20), rgba(37,99,235,.20)), var(--card)}
+    .tile.planned{background:linear-gradient(0deg, rgba(37,99,235,.22), rgba(37,99,235,.22)), var(--card)}
+    .tile.operational{background:linear-gradient(0deg, rgba(21,128,61,.25), rgba(21,128,61,.25)), var(--card)}
 
-    .panel{
-      background:var(--card);
+    /* Handover banner */
+    .handover{
+      display:none;
+      margin:12px 0 14px;
+      border-radius:14px;
+      border:1px solid var(--pindan);
+      background:rgba(197,75,0,.14);
+      padding:12px 14px;
+      font-weight:900;
+      line-height:1.25;
+    }
+    .handover .sub{font-size:12px;color:var(--muted);font-weight:800;margin-top:6px}
+
+    /* Bottom grid: Status left, Notices right */
+    .bottom{display:grid;grid-template-columns:2fr 1.2fr;gap:12px;align-items:start}
+    .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+    .panel-head{
+      padding:12px 14px;background:#071d24;border-bottom:1px solid var(--line);
+      display:flex;align-items:center;justify-content:space-between;gap:10px
+    }
+    .panel-head .title{font-size:13px;color:var(--muted);font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+    .panel-head .sub{font-size:12px;color:var(--muted);opacity:.9}
+
+    /* System cards */
+    .systems{display:grid;grid-template-columns:repeat(2, 1fr);gap:12px;padding:12px}
+    .sys{
       border:1px solid var(--line);
       border-radius:14px;
-      overflow:hidden;
+      padding:12px;
+      background:#06181f;
+      min-height:140px;
+      display:flex;flex-direction:column;gap:10px;
     }
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:14px 14px;border-bottom:1px solid var(--line);font-size:18px}
-    th{background:#071d24;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-size:13px}
-    tr:last-child td{border-bottom:none}
-    .status-pill{
-      display:inline-block;
-      padding:6px 10px;
-      border-radius:999px;
-      font-weight:800;
-      font-size:14px;
-      letter-spacing:.02em;
-      border:1px solid var(--line);
-    }
-    .s-operational{background:rgba(21,128,61,.20);color:#bbf7d0}
-    .s-degraded{background:rgba(202,138,4,.22);color:#fde68a}
-    .s-offline{background:rgba(185,28,28,.22);color:#fecaca}
-    .s-planned{background:rgba(37,99,235,.18);color:#bfdbfe}
+    .sys-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .sys-name{font-weight:900;font-size:18px;letter-spacing:.02em}
+    .badge{font-weight:900;font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);letter-spacing:.04em}
+    .b-red{background:rgba(185,28,28,.22);color:#fecaca}
+    .b-amber{background:rgba(202,138,4,.22);color:#fde68a}
+    .b-green{background:rgba(21,128,61,.22);color:#bbf7d0}
+    .b-blue{background:rgba(37,99,235,.18);color:#bfdbfe}
 
-    footer{
-      padding:10px 18px 14px;
-      color:var(--muted);
-      font-size:13px;
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      opacity:.9;
-    }
+    .items{display:flex;flex-direction:column;gap:8px}
+    .item{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .item .left{display:flex;align-items:center;gap:10px;min-width:0}
+    .dot{width:12px;height:12px;border-radius:999px;border:1px solid var(--line);flex:0 0 auto}
+    .dot.red{background:var(--red)}
+    .dot.amber{background:var(--amber)}
+    .dot.green{background:var(--green)}
+    .dot.blue{background:var(--blue)}
+    .item .label{font-size:14px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-    /* wall readability */
-    @media (max-width: 980px){
+    /* Notices */
+    .notices{padding:12px;display:flex;flex-direction:column;gap:10px}
+    .notice{border:1px solid var(--line);border-radius:14px;background:#06181f;padding:10px 12px;display:flex;gap:10px}
+    .tag{width:10px;border-radius:8px;background:var(--pindan)}
+    .notice .body{display:flex;flex-direction:column;gap:4px;min-width:0}
+    .notice .t{font-weight:900;font-size:13px;letter-spacing:.02em}
+    .notice .m{font-size:13px;color:var(--muted);font-weight:800;line-height:1.25}
+    .notice .meta{font-size:11px;color:var(--muted);opacity:.85;text-align:left}
+
+    footer{padding:10px 18px 14px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:10px;opacity:.9}
+
+    @media (max-width: 1000px){
       .tiles{grid-template-columns:repeat(2,1fr)}
-      th,td{font-size:16px}
+      .bottom{grid-template-columns:1fr}
+      .systems{grid-template-columns:1fr}
     }
   </style>
 </head>
 <body>
-<header>
-  <div class="brand">
-    <div class="logo">Shire</div>
-    <div class="titles">
-      <div class="h1">LIVE PLANT STATUS</div>
-      <div class="h2">Aquatic Facility – 25m Pool</div>
+  <header>
+    <div class="brand">
+      <div class="logo">LOGO</div>
+      <div class="titles">
+        <div class="h1">LIVE PLANT STATUS</div>
+        <div class="h2">Aquatic Facility – 25m Pool</div>
+      </div>
     </div>
-  </div>
-  <div class="meta">
-    <div id="lastUpdated">Last updated: —</div>
-    <div id="refreshedAt">Refreshed: —</div>
-  </div>
-</header>
+    <div class="meta">
+      <div id="lastUpdated">Last updated: —</div>
+      <div id="refreshedAt">Refreshed: —</div>
+    </div>
+  </header>
 
-<div class="wrap">
-  <section class="tiles">
-    <div class="tile offline">
-      <div class="label">OFFLINE</div>
-      <div class="value" id="cntOffline">—</div>
-    </div>
-    <div class="tile degraded">
-      <div class="label">DEGRADED</div>
-      <div class="value" id="cntDegraded">—</div>
-    </div>
-    <div class="tile maint">
-      <div class="label">PLANNED</div>
-      <div class="value" id="cntPlanned">—</div>
-    </div>
-    <div class="tile ok">
-      <div class="label">OPERATIONAL</div>
-      <div class="value" id="cntOperational">—</div>
-    </div>
-  </section>
+  <div class="wrap">
+    <section class="tiles">
+      <div class="tile offline"><div class="label">OFFLINE</div><div class="value" id="cntOffline">—</div></div>
+      <div class="tile degraded"><div class="label">DEGRADED</div><div class="value" id="cntDegraded">—</div></div>
+      <div class="tile planned"><div class="label">PLANNED</div><div class="value" id="cntPlanned">—</div></div>
+      <div class="tile operational"><div class="label">OPERATIONAL</div><div class="value" id="cntOperational">—</div></div>
+    </section>
 
-  <div class="panel">
-    <table>
-      <thead>
-        <tr>
-          <th style="width:40%">Component</th>
-          <th style="width:20%">Status</th>
-          <th style="width:20%">Owner</th>
-          <th style="width:20%">Issue</th>
-        </tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
+    <div class="handover" id="handoverBanner">
+      HANDOVER ACTIVE: <span id="handoverMsg"></span>
+      <div class="sub" id="handoverMeta"></div>
+    </div>
+
+    <section class="bottom">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="title">Status by system</div>
+          <div class="sub">Worst status shown per system</div>
+        </div>
+        <div class="systems" id="systems"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div class="title">Noticeboard</div>
+          <div class="sub">Short operational notices</div>
+        </div>
+        <div class="notices" id="notices"></div>
+      </div>
+    </section>
   </div>
-</div>
 
-<footer>
-  <div>Internal Operations Dashboard</div>
-  <div>Display only</div>
-</footer>
+  <footer>
+    <div>Internal Operations Dashboard</div>
+    <div>Display only</div>
+  </footer>
 
 <script>
-  // ✅ Paste your CSV URL here (see instructions above)
-  const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=0&single=true&output=csv";
+  // === LIVE DATA URLS (already filled) ===
+  const PLANT_CSV_URL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=0&single=true&output=csv";
 
-  const REFRESH_MS = 5000; // 5s wall refresh
+  const NOTICE_CSV_URL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=684780974&single=true&output=csv";
+
+  const HANDOVER_CSV_URL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=871823190&single=true&output=csv";
+
+  const REFRESH_MS = 30000;
+
+  function fmtTime(d){
+    return d.toLocaleString(undefined, { year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[c]));
+  }
 
   function parseCSV(text){
-    // Basic CSV parser supporting quoted commas/newlines.
     const rows = [];
     let row = [], cur = "", inQuotes = false;
 
@@ -178,7 +219,6 @@
       if (!inQuotes && (c === '\n' || c === '\r')) {
         if (c === '\r' && next === '\n') i++;
         row.push(cur); cur="";
-        // avoid pushing empty trailing row
         if (row.some(v => v !== "")) rows.push(row);
         row = [];
         continue;
@@ -190,103 +230,254 @@
     return rows;
   }
 
-  function statusClass(status){
-    const s = (status || "").trim().toLowerCase();
-    if (s === "offline") return "s-offline";
-    if (s === "degraded") return "s-degraded";
-    if (s === "planned maintenance") return "s-planned";
-    return "s-operational";
+  function normStatus(s){
+    s = String(s || "").trim().toLowerCase();
+    if (s === "offline") return "Offline";
+    if (s === "degraded") return "Degraded";
+    if (s === "planned maintenance") return "Planned Maintenance";
+    return "Operational";
   }
 
-  function statusOrder(status){
-    const s = (status || "").trim().toLowerCase();
-    if (s === "offline") return 1;
-    if (s === "degraded") return 2;
-    if (s === "planned maintenance") return 3;
-    return 4; // operational/blank
+  function statusRank(s){
+    s = normStatus(s);
+    if (s === "Offline") return 1;
+    if (s === "Degraded") return 2;
+    if (s === "Planned Maintenance") return 3;
+    return 4;
   }
 
-  function fmtTime(d){
-    return d.toLocaleString(undefined, { year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
+  function dotClass(status){
+    const s = normStatus(status);
+    if (s === "Offline") return "red";
+    if (s === "Degraded") return "amber";
+    if (s === "Planned Maintenance") return "blue";
+    return "green";
   }
 
-  async function load(){
-    const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
-    if (!res.ok) throw new Error("Failed to fetch CSV: " + res.status);
+  function badgeClass(status){
+    const s = normStatus(status);
+    if (s === "Offline") return "b-red";
+    if (s === "Degraded") return "b-amber";
+    if (s === "Planned Maintenance") return "b-blue";
+    return "b-green";
+  }
+
+  function systemKeyFromRow(row){
+    // Prefer the Sheet "System" column; fallback to component ID prefix
+    const sys = (row.system || "").trim();
+    if (sys) return sys.toUpperCase();
+
+    const id = (row.id || "").trim().toUpperCase();
+    if (id.startsWith("PUMP")) return "PUMPS";
+    if (id.startsWith("FIL")) return "FILTERS";
+    if (id.startsWith("HEAT") || id.startsWith("SOLAR")) return "HEATING";
+    if (id.startsWith("UV")) return "UV";
+    return "OTHER";
+  }
+
+  function prettySystemName(key){
+    const k = String(key || "").toUpperCase();
+    if (k === "PUMPS") return "PUMPS";
+    if (k === "FILTERS") return "FILTERS";
+    if (k === "HEATING") return "HEATING";
+    if (k === "UV") return "UV";
+    return k || "OTHER";
+  }
+
+  function isActiveNotice(startStr, endStr){
+    const now = new Date();
+    const start = startStr ? new Date(startStr) : null;
+    const end = endStr ? new Date(endStr) : null;
+    const okStart = !startStr || (!isNaN(start) && start <= now);
+    const okEnd = !endStr || (!isNaN(end) && end >= now);
+    return okStart && okEnd;
+  }
+
+  async function loadPlant(){
+    const res = await fetch(PLANT_CSV_URL, { cache:"no-store" });
+    if (!res.ok) throw new Error("Plant CSV fetch failed: " + res.status);
     const csv = await res.text();
     const data = parseCSV(csv);
-    const headers = data[0];
-    const idx = (name) => headers.indexOf(name);
 
+    const headers = data[0];
+    const idx = (n) => headers.indexOf(n);
+
+    const iId = idx("Component ID");
     const iName = idx("Component Name");
+    const iSystem = idx("System");
     const iStatus = idx("Status");
-    const iOwner = idx("Owner");
-    const iIssue = idx("Issue Summary");
     const iUpdated = idx("Last Updated");
 
     const items = data.slice(1).map(r => ({
-      name: r[iName] || "",
-      status: r[iStatus] || "",
-      owner: r[iOwner] || "",
-      issue: r[iIssue] || "",
-      updated: r[iUpdated] || ""
-    })).filter(x => x.name.trim() !== "");
+      id: (r[iId] || "").trim(),
+      name: (r[iName] || "").trim(),
+      system: (r[iSystem] || "").trim(),
+      status: normStatus(r[iStatus]),
+      updated: (r[iUpdated] || "").trim()
+    })).filter(x => x.id && x.name);
 
-    // Counts
-    const counts = { offline:0, degraded:0, planned:0, operational:0 };
+    // Counts & max updated
+    const counts = { Offline:0, Degraded:0, Planned:0, Operational:0 };
     let maxUpdated = null;
 
     for (const it of items){
-      const s = (it.status || "").trim().toLowerCase();
-      if (s === "offline") counts.offline++;
-      else if (s === "degraded") counts.degraded++;
-      else if (s === "planned maintenance") counts.planned++;
-      else counts.operational++;
+      if (it.status === "Offline") counts.Offline++;
+      else if (it.status === "Degraded") counts.Degraded++;
+      else if (it.status === "Planned Maintenance") counts.Planned++;
+      else counts.Operational++;
 
       const dt = new Date(it.updated);
       if (!isNaN(dt) && (!maxUpdated || dt > maxUpdated)) maxUpdated = dt;
     }
 
-    document.getElementById("cntOffline").textContent = counts.offline;
-    document.getElementById("cntDegraded").textContent = counts.degraded;
-    document.getElementById("cntPlanned").textContent = counts.planned;
-    document.getElementById("cntOperational").textContent = counts.operational;
+    document.getElementById("cntOffline").textContent = counts.Offline;
+    document.getElementById("cntDegraded").textContent = counts.Degraded;
+    document.getElementById("cntPlanned").textContent = counts.Planned;
+    document.getElementById("cntOperational").textContent = counts.Operational;
 
     document.getElementById("lastUpdated").textContent =
       "Last updated: " + (maxUpdated ? fmtTime(maxUpdated) : "—");
-    document.getElementById("refreshedAt").textContent =
-      "Refreshed: " + fmtTime(new Date());
 
-    // Table sorted by status severity then name
-    items.sort((a,b) => {
-      const o = statusOrder(a.status) - statusOrder(b.status);
-      if (o !== 0) return o;
-      return a.name.localeCompare(b.name);
-    });
-
-    const tbody = document.getElementById("rows");
-    tbody.innerHTML = "";
+    // Group into systems
+    const groups = new Map();
     for (const it of items){
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td><strong>${escapeHtml(it.name)}</strong></td>
-        <td><span class="status-pill ${statusClass(it.status)}">${escapeHtml(it.status || "Operational")}</span></td>
-        <td>${escapeHtml(it.owner)}</td>
-        <td>${escapeHtml(it.issue)}</td>
+      const key = systemKeyFromRow(it);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(it);
+    }
+
+    // Render system cards (priority order you requested)
+    const order = ["PUMPS", "FILTERS", "HEATING", "UV", "OTHER"];
+    const container = document.getElementById("systems");
+    container.innerHTML = "";
+
+    for (const key of order){
+      if (!groups.has(key)) continue;
+      const list = groups.get(key);
+
+      // Determine worst status
+      let worst = "Operational";
+      for (const it of list){
+        if (statusRank(it.status) < statusRank(worst)) worst = it.status;
+      }
+
+      // Sort items within system by severity then name
+      list.sort((a,b) => statusRank(a.status) - statusRank(b.status) || a.name.localeCompare(b.name));
+
+      const card = document.createElement("div");
+      card.className = "sys";
+      card.innerHTML = `
+        <div class="sys-top">
+          <div class="sys-name">${escapeHtml(prettySystemName(key))}</div>
+          <span class="badge ${badgeClass(worst)}">${escapeHtml(worst.toUpperCase())}</span>
+        </div>
+        <div class="items">
+          ${list.map(it => `
+            <div class="item">
+              <div class="left">
+                <span class="dot ${dotClass(it.status)}"></span>
+                <span class="label">${escapeHtml(it.name)}</span>
+              </div>
+            </div>
+          `).join("")}
+        </div>
       `;
-      tbody.appendChild(tr);
+      container.appendChild(card);
     }
   }
 
-  function escapeHtml(s){
-    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
-    }[c]));
+  async function loadNotices(){
+    const res = await fetch(NOTICE_CSV_URL, { cache:"no-store" });
+    if (!res.ok) throw new Error("Notice CSV fetch failed: " + res.status);
+    const csv = await res.text();
+    const data = parseCSV(csv);
+    const headers = data[0];
+    const idx = (n) => headers.indexOf(n);
+
+    const iTitle = idx("Title");
+    const iMsg = idx("Message");
+    const iCat = idx("Category");
+    const iStart = idx("Start");
+    const iEnd = idx("End");
+
+    const items = data.slice(1).map(r => ({
+      title: (r[iTitle] || "").trim(),
+      msg: (r[iMsg] || "").trim(),
+      cat: (r[iCat] || "").trim(),
+      start: (r[iStart] || "").trim(),
+      end: (r[iEnd] || "").trim(),
+    })).filter(x => x.title || x.msg);
+
+    // Wall view shows active notices (no audience filtering here)
+    const active = items.filter(n => isActiveNotice(n.start, n.end)).slice(0, 6);
+
+    const container = document.getElementById("notices");
+    container.innerHTML = "";
+
+    if (!active.length){
+      container.innerHTML = `
+        <div class="notice">
+          <div class="tag"></div>
+          <div class="body">
+            <div class="t">No active notices</div>
+            <div class="m">Nothing currently posted.</div>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    for (const n of active){
+      const el = document.createElement("div");
+      el.className = "notice";
+      const cat = (n.cat || "Notice").trim();
+      let tagColor = "var(--pindan)";
+      if (cat.toLowerCase() === "safety") tagColor = "var(--red)";
+      if (cat.toLowerCase() === "ops") tagColor = "var(--amber)";
+      if (cat.toLowerCase() === "info") tagColor = "var(--blue)";
+
+      el.innerHTML = `
+        <div class="tag" style="background:${tagColor}"></div>
+        <div class="body">
+          <div class="t">${escapeHtml(n.title || cat)}</div>
+          <div class="m">${escapeHtml(n.msg)}</div>
+          <div class="meta">${escapeHtml(cat)}${n.end ? " • Ends: " + escapeHtml(n.end) : ""}</div>
+        </div>
+      `;
+      container.appendChild(el);
+    }
+  }
+
+  async function loadHandover(){
+    const res = await fetch(HANDOVER_CSV_URL, { cache:"no-store" });
+    if (!res.ok) throw new Error("Handover CSV fetch failed: " + res.status);
+    const csv = await res.text();
+    const data = parseCSV(csv);
+    const headers = data[0];
+    const row = data[1] || [];
+    const idx = (n) => headers.indexOf(n);
+
+    const active = (row[idx("Active")] || "").trim().toLowerCase();
+    const msg = (row[idx("Message")] || "").trim();
+    const created = (row[idx("Created")] || "").trim();
+    const ack = (row[idx("Acknowledged")] || "").trim().toLowerCase();
+
+    const banner = document.getElementById("handoverBanner");
+
+    if (active === "yes" && ack !== "yes" && msg){
+      document.getElementById("handoverMsg").textContent = msg;
+      document.getElementById("handoverMeta").textContent = created ? ("Created: " + created) : "";
+      banner.style.display = "block";
+    } else {
+      banner.style.display = "none";
+    }
   }
 
   async function tick(){
-    try { await load(); }
-    catch(e){
+    try{
+      await Promise.all([loadPlant(), loadNotices(), loadHandover()]);
+      document.getElementById("refreshedAt").textContent = "Refreshed: " + fmtTime(new Date());
+    } catch(e){
       console.error(e);
       document.getElementById("refreshedAt").textContent = "Refreshed: ERROR";
     }
