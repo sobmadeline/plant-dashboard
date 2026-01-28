@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Plant Status – Update</title>
+  <style>
+    :root{
+      --pindan:#C54B00;
+      --dark-turq:#004153;
+      --bg:#07141a;
+      --card:#0b2028;
+      --text:#f8fafc;
+      --muted:#cbd5e1;
+      --line:#14313b;
+      --good:#15803d;
+      --warn:#ca8a04;
+      --bad:#b91c1c;
+      --plan:#2563eb;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+    header{
+      background:var(--dark-turq);
+      padding:14px 16px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    .logo{
+      width:40px;height:40px;border-radius:10px;
+      background:var(--pindan);color:white;
+      display:flex;align-items:center;justify-content:center;
+      font-weight:900;
+    }
+    .h1{font-size:18px;font-weight:900;line-height:1.1}
+    .h2{font-size:13px;opacity:.85;margin-top:2px}
+
+    .wrap{padding:14px 14px 20px}
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px;
+      margin-bottom:12px;
+    }
+    label{display:block;font-size:13px;color:var(--muted);font-weight:700;margin:10px 0 6px}
+    select, input, textarea{
+      width:100%; padding:12px 12px;
+      border-radius:12px; border:1px solid var(--line);
+      background:#06181f; color:var(--text);
+      font-size:16px;
+    }
+    textarea{min-height:80px; resize:vertical}
+
+    .btnrow{
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:10px;
+      margin-top:10px;
+    }
+    .btn{
+      border:none;
+      border-radius:14px;
+      padding:14px 12px;
+      font-size:16px;
+      font-weight:900;
+      color:white;
+      cursor:pointer;
+    }
+    .b-good{background:var(--good)}
+    .b-warn{background:var(--warn)}
+    .b-bad{background:var(--bad)}
+    .b-plan{background:var(--plan)}
+    .submit{
+      width:100%;
+      margin-top:12px;
+      background:var(--pindan);
+      border:none;border-radius:14px;
+      padding:14px 12px;
+      color:white;font-weight:900;font-size:17px;
+      cursor:pointer;
+    }
+    .toast{
+      position:fixed;left:50%;transform:translateX(-50%);
+      bottom:14px;
+      background:#05212a;
+      border:1px solid var(--line);
+      padding:12px 14px;border-radius:14px;
+      max-width:92vw;
+      display:none;
+      font-weight:800;
+    }
+    .small{font-size:12px;color:var(--muted);margin-top:8px}
+    .list table{width:100%;border-collapse:collapse}
+    .list th,.list td{padding:10px;border-bottom:1px solid var(--line);font-size:14px}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid var(--line);font-weight:900}
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo">LOGO</div>
+  <div>
+    <div class="h1">Update Plant Status</div>
+    <div class="h2">Aquatic Facility – 25m Pool</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="card">
+    <div style="font-weight:900;font-size:16px">Quick Update</div>
+
+    <label>Component</label>
+    <select id="component"></select>
+
+    <label>Status</label>
+    <div class="btnrow">
+      <button class="btn b-good" type="button" onclick="setStatus('Operational')">Operational</button>
+      <button class="btn b-warn" type="button" onclick="setStatus('Degraded')">Degraded</button>
+      <button class="btn b-bad" type="button" onclick="setStatus('Offline')">Offline</button>
+      <button class="btn b-plan" type="button" onclick="setStatus('Planned Maintenance')">Planned</button>
+    </div>
+
+    <label>Condition</label>
+    <select id="condition">
+      <option value="">(optional)</option>
+      <option>Normal</option>
+      <option>Noise / Vibration</option>
+      <option>Reduced Flow</option>
+      <option>Pressure Issue</option>
+      <option>Leak Present</option>
+      <option>Electrical Fault</option>
+      <option>Under Investigation</option>
+    </select>
+
+    <label>Issue Summary</label>
+    <input id="summary" placeholder="e.g., Bearing noise on startup" />
+
+    <label>Owner</label>
+    <select id="owner">
+      <option>Duty Manager</option>
+      <option>Operations</option>
+      <option>Maintenance</option>
+      <option>Electrical</option>
+      <option>Plumbing</option>
+    </select>
+
+    <div class="small" id="chosenStatus">Selected status: —</div>
+
+    <button class="submit" onclick="submitUpdate()">Save Update</button>
+  </div>
+
+  <div class="card list">
+    <div style="font-weight:900;font-size:16px;margin-bottom:8px">Current Status (read-only)</div>
+    <table>
+      <thead>
+        <tr><th>Component</th><th>Status</th></tr>
+      </thead>
+      <tbody id="list"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ✅ Paste your CSV URL here (same as wall.html)
+  const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=0&single=true&output=csv";
+
+  // ✅ Your working Apps Script Web App URL (WRITE)
+  const WRITE_URL = "https://script.google.com/macros/s/AKfycbwXQmJ-BbhYdknj4GbUNYSgZlpVr0Emw3cOhEV6HNUPwwlax_YSxf__l2hlXqQqHhDnNA/exec";
+
+  let cached = [];
+  let selectedStatus = "";
+
+  function setStatus(s){
+    selectedStatus = s;
+    document.getElementById("chosenStatus").textContent = "Selected status: " + s;
+    toast("Status set to: " + s, 1200);
+  }
+
+  function toast(msg, ms=1800){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.style.display = "block";
+    setTimeout(()=> t.style.display="none", ms);
+  }
+
+  function parseCSV(text){
+    const rows = [];
+    let row = [], cur = "", inQuotes = false;
+
+    for (let i=0; i<text.length; i++){
+      const c = text[i];
+      const next = text[i+1];
+
+      if (c === '"' && inQuotes && next === '"') { cur += '"'; i++; continue; }
+      if (c === '"') { inQuotes = !inQuotes; continue; }
+
+      if (!inQuotes && c === ',') { row.push(cur); cur=""; continue; }
+      if (!inQuotes && (c === '\n' || c === '\r')) {
+        if (c === '\r' && next === '\n') i++;
+        row.push(cur); cur="";
+        if (row.some(v => v !== "")) rows.push(row);
+        row = [];
+        continue;
+      }
+      cur += c;
+    }
+    row.push(cur);
+    if (row.some(v => v !== "")) rows.push(row);
+    return rows;
+  }
+
+  async function load(){
+    const res = await fetch(SHEET_CSV_URL, { cache:"no-store" });
+    const csv = await res.text();
+    const data = parseCSV(csv);
+    const headers = data[0];
+    const idx = (n) => headers.indexOf(n);
+
+    const iId = idx("Component ID");
+    const iName = idx("Component Name");
+    const iStatus = idx("Status");
+
+    const items = data.slice(1).map(r => ({
+      id: (r[iId] || "").trim(),
+      name: (r[iName] || "").trim(),
+      status: (r[iStatus] || "").trim()
+    })).filter(x => x.id && x.name);
+
+    cached = items;
+
+    // Populate component dropdown
+    const sel = document.getElementById("component");
+    sel.innerHTML = items.map(x => `<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)} (${escapeHtml(x.id)})</option>`).join("");
+
+    // Populate list
+    const tbody = document.getElementById("list");
+    tbody.innerHTML = "";
+    for (const it of items){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${escapeHtml(it.name)}</td><td><span class="pill">${escapeHtml(it.status || "Operational")}</span></td>`;
+      tbody.appendChild(tr);
+    }
+  }
+
+  async function submitUpdate(){
+    const componentId = document.getElementById("component").value;
+    const condition = document.getElementById("condition").value;
+    const summary = document.getElementById("summary").value;
+    const owner = document.getElementById("owner").value;
+
+    if (!componentId) return toast("Pick a component first.");
+    if (!selectedStatus) return toast("Tap a Status button first.");
+
+    // Write uses form-style POST to avoid preflight/CORS pain
+    const body = new URLSearchParams({
+      componentId,
+      status: selectedStatus,
+      condition,
+      summary,
+      owner
+    });
+
+    toast("Saving…", 1200);
+
+    const res = await fetch(WRITE_URL, { method:"POST", body });
+    const text = await res.text();
+
+    if (!res.ok || !String(text).startsWith("OK")) {
+      console.error(text);
+      return toast("Save failed. Check connection.", 2200);
+    }
+
+    toast("Saved ✅", 1600);
+    // refresh list
+    await load();
+    document.getElementById("summary").value = "";
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  load().catch(err => {
+    console.error(err);
+    toast("Could not load sheet data", 2500);
+  });
+</script>
+</body>
+</html>
