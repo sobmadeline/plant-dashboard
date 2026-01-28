@@ -288,16 +288,6 @@
       </div>
     </div>
   </div>
-
-  <div class="toast" id="toast"></div>
-
-<script>
-
-window.addEventListener("error", (ev) => {
-  const msg = ev && ev.message ? ev.message : "Unknown script error";
-  toast("JS ERROR: " + msg, 6000);
-});
-
 <!-- CLOCK TAB -->
 <div id="tab-clock" class="wrap" style="display:none">
   <div class="card">
@@ -327,6 +317,15 @@ window.addEventListener("error", (ev) => {
     </div>
   </div>
 </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+
+window.addEventListener("error", (ev) => {
+  const msg = ev && ev.message ? ev.message : "Unknown script error";
+  toast("JS ERROR: " + msg, 6000);
+});
 
   // === LIVE DATA URLS ===
   const PLANT_CSV_URL =
