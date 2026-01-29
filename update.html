@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>BRAC Tools – Centre Management</title>
+  <title>BRAC Tools - Centre Management</title>
 
   <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -57,6 +57,8 @@
     <button class="tab flex-1 rounded-2xl border border-line bg-card px-3 py-3 font-black text-base"
       id="btnChemical" type="button" onclick="switchTab('chemical')">Chemical</button>
 
+    <button class="tab flex-1 rounded-2xl border border-line bg-card px-3 py-3 font-black text-base"
+      id="btnClock" type="button" onclick="switchTab('clock')">Clock In/Out</button>
   </div>
 
   <!-- UPDATE TAB -->
@@ -161,7 +163,7 @@
       <div class="text-xs font-extrabold text-muted">Based on BRAC Aquatic Chemical Calculator (Excel). Default volume is 1,000,000 L.</div>
 
       <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Pool volume</label>
-      <div class="grid grid-cols-2 gap-2.5">
+      <div class="grid grid-cols-2 gap-2.5 max-[540px]:grid-cols-1">
         <input id="chemVol" inputmode="decimal" placeholder="1000" value="1000"
           class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
         <select id="chemVolUnit" class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base">
@@ -280,12 +282,13 @@
     </div>
   </div>
 
-  <!-- Toast -->
+  <!-- Toast (keep style.display logic) -->
   <div id="toast"
-    class="fixed left-1/2 -translate-x-1/2 bottom-4 bg-[#05212a] border border-line px-4 py-3 rounded-2xl max-w-[92vw] font-black z-[999] hidden">
-  </div>
+    class="fixed left-1/2 -translate-x-1/2 bottom-4 bg-[#05212a] border border-line px-4 py-3 rounded-2xl max-w-[92vw] font-black z-[999]"
+    style="display:none"></div>
 
 <script>
+
 window.addEventListener("error", (ev) => {
   const msg = ev && ev.message ? ev.message : "Unknown script error";
   toast("JS ERROR: " + msg, 6000);
@@ -305,9 +308,9 @@ const HANDOVER_CSV_URL =
 const WRITE_URL =
   "https://script.google.com/macros/s/AKfycbzAQ3ZDxtE-WHc-HxDIFbbDMPJMqyXf6K1qtt5pCaQBPPgA1gvLid8v7gvx9jnerBHJlg/exec";
 
-let cached = [];
-let selectedStatus = "";
-let chemLast = null;
+let cached = [];            // Plant items cached after load()
+let selectedStatus = "";    // Set by status buttons
+let chemLast = null;        // Last chemical calculation snapshot
 
 function escapeHtml(s){
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({
@@ -318,36 +321,499 @@ function escapeHtml(s){
 function toast(msg, ms=1800){
   const t = document.getElementById("toast");
   t.textContent = msg;
-  t.classList.remove("hidden");
-  setTimeout(()=> t.classList.add("hidden"), ms);
+  t.style.display = "block";
+  setTimeout(()=> t.style.display="none", ms);
 }
 
-/* ---- your JS below is unchanged ---- */
-function parseCSV(text){ /* ... unchanged ... */ }
-function rankStatus(s){ /* ... unchanged ... */ }
-function isActiveNotice(startStr,endStr){ /* ... unchanged ... */ }
-function audienceMatches(audienceCell,selected){ /* ... unchanged ... */ }
-async function loadPlant(){ /* ... unchanged ... */ }
-function wireStatusButtons(){ /* ... unchanged ... */ }
-async function submitUpdate(){ /* ... unchanged ... */ }
-function buildPlantSummary(){ /* ... unchanged ... */ }
-async function loadNoticesForHandover(){ /* ... unchanged ... */ }
-async function refreshHandover(){ /* ... unchanged ... */ }
-async function setHandover(){ /* ... unchanged ... */ }
-async function ackHandover(){ /* ... unchanged ... */ }
-function switchTab(which){ /* ... unchanged ... */ }
-function num(id){ /* ... unchanged ... */ }
-function roundup(x,decimals){ /* ... unchanged ... */ }
-function poolLitres(){ /* ... unchanged ... */ }
-function pureKg(deltaPpm,volL){ /* ... unchanged ... */ }
-function fmt(x,suffix){ /* ... unchanged ... */ }
-function line(title,value){ /* ... unchanged ... */ }
-function nowStamp(){ /* ... unchanged ... */ }
-async function copyText(text){ /* ... unchanged ... */ }
-function buildChemNotes(){ /* ... unchanged ... */ }
-async function copyChemNotes(addToHandover=false){ /* ... unchanged ... */ }
-function runChem(){ /* ... unchanged ... */ }
+function parseCSV(text){
+  const rows = [];
+  let row = [], cur = "", inQuotes = false;
 
+  for (let i=0; i<text.length; i++){
+    const c = text[i];
+    const next = text[i+1];
+
+    if (c === '"' && inQuotes && next === '"') { cur += '"'; i++; continue; }
+    if (c === '"') { inQuotes = !inQuotes; continue; }
+
+    if (!inQuotes && c === ',') { row.push(cur); cur=""; continue; }
+    if (!inQuotes && (c === '\n' || c === '\r')) {
+      if (c === '\r' && next === '\n') i++;
+      row.push(cur); cur="";
+      if (row.some(v => v !== "")) rows.push(row);
+      row = [];
+      continue;
+    }
+    cur += c;
+  }
+  row.push(cur);
+  if (row.some(v => v !== "")) rows.push(row);
+  return rows;
+}
+
+function rankStatus(s){
+  s = (s || "").trim().toLowerCase();
+  if (s === "offline") return 1;
+  if (s === "degraded") return 2;
+  if (s === "planned maintenance") return 3;
+  return 4;
+}
+
+function isActiveNotice(startStr, endStr){
+  const now = new Date();
+  const start = startStr ? new Date(startStr) : null;
+  const end = endStr ? new Date(endStr) : null;
+  const okStart = !startStr || (!isNaN(start) && start <= now);
+  const okEnd = !endStr || (!isNaN(end) && end >= now);
+  return okStart && okEnd;
+}
+
+function audienceMatches(audienceCell, selected){
+  const raw = (audienceCell || "").trim();
+  if (!raw || raw.toLowerCase() === "all") return true;
+  const parts = raw.split(",").map(x => x.trim().toLowerCase()).filter(Boolean);
+  return parts.includes(String(selected).trim().toLowerCase()) || parts.includes("all");
+}
+
+async function loadPlant(){
+  const res = await fetch(PLANT_CSV_URL, { cache:"no-store" });
+  const csv = await res.text();
+  const data = parseCSV(csv);
+  const headers = data[0];
+  const idx = (n) => headers.indexOf(n);
+
+  const iId = idx("Component ID");
+  const iName = idx("Component Name");
+  const iStatus = idx("Status");
+  const iIssue = idx("Issue Summary");
+
+  const items = data.slice(1).map(r => ({
+    id: (r[iId] || "").trim(),
+    name: (r[iName] || "").trim(),
+    status: (r[iStatus] || "").trim(),
+    issue: (r[iIssue] || "").trim()
+  })).filter(x => x.id && x.name);
+
+  cached = items;
+
+  // Populate dropdown
+  const sel = document.getElementById("component");
+  sel.innerHTML = items.map(x =>
+    `<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)} (${escapeHtml(x.id)})</option>`
+  ).join("");
+
+  // Render read-only list (compact)
+  const list = items
+    .slice()
+    .sort((a,b) => rankStatus(a.status) - rankStatus(b.status) || a.name.localeCompare(b.name))
+    .map(it => `• ${it.name}: ${it.status || "Operational"}`)
+    .join("<br>");
+
+  document.getElementById("statusList").innerHTML = list || "No data";
+}
+
+function wireStatusButtons(){
+  document.querySelectorAll("#statusButtons .btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedStatus = btn.dataset.status || "";
+      document.getElementById("chosenStatus").textContent = "Selected status: " + selectedStatus;
+
+      document.querySelectorAll("#statusButtons .btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+    });
+  });
+}
+
+async function submitUpdate(){
+  try{
+    const componentId = document.getElementById("component").value;
+    const condition = document.getElementById("condition").value;
+    const summary = document.getElementById("summary").value;
+
+    if (!componentId) return toast("Pick a component first.");
+    if (!selectedStatus) return toast("Tap a Status button first.");
+
+    const body = new URLSearchParams({
+      action: "updateComponent",
+      componentId,
+      status: selectedStatus,
+      condition,
+      summary
+    });
+
+    toast("Saving…", 1500);
+    const res = await fetch(WRITE_URL, { method:"POST", body });
+    const text = await res.text();
+
+    if (!res.ok || !String(text).startsWith("OK")) {
+      console.error(text);
+      return toast("Save failed. Check connection / script.", 3000);
+    }
+
+    toast(text, 2000);
+    document.getElementById("summary").value = "";
+    await loadPlant();
+  } catch(e){
+    console.error(e);
+    toast("Save failed (network/browser error)", 3200);
+  }
+}
+
+function buildPlantSummary(){
+  const nonOp = cached
+    .filter(it => rankStatus(it.status) <= 3 && (it.status || "").trim().toLowerCase() !== "operational")
+    .sort((a,b) => rankStatus(a.status) - rankStatus(b.status));
+
+  if (!nonOp.length){
+    return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px"><li>No non-operational items</li></ul>`;
+  }
+
+  return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px">` + nonOp.map(it =>
+    `<li><strong>${escapeHtml(it.name)}</strong> — ${escapeHtml(it.status)}${it.issue ? " • " + escapeHtml(it.issue) : ""}</li>`
+  ).join("") + `</ul>`;
+}
+
+async function loadNoticesForHandover(){
+  const selected = document.getElementById("audience").value;
+
+  const res = await fetch(NOTICE_CSV_URL, { cache:"no-store" });
+  const csv = await res.text();
+  const rows = parseCSV(csv);
+  const headers = rows[0];
+  const idx = (n) => headers.indexOf(n);
+
+  const iTitle = idx("Title");
+  const iMsg = idx("Message");
+  const iStart = idx("Start");
+  const iEnd = idx("End");
+  const iAud = idx("Audience");
+
+  const items = rows.slice(1).map(r => ({
+    title: (r[iTitle] || "").trim(),
+    msg: (r[iMsg] || "").trim(),
+    start: (r[iStart] || "").trim(),
+    end: (r[iEnd] || "").trim(),
+    aud: (r[iAud] || "").trim()
+  })).filter(x => x.title || x.msg);
+
+  const active = items
+    .filter(n => isActiveNotice(n.start, n.end))
+    .filter(n => audienceMatches(n.aud, selected))
+    .slice(0, 6);
+
+  if (!active.length){
+    return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px"><li>No active notices for ${escapeHtml(selected)}</li></ul>`;
+  }
+
+  return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px">` + active.map(n =>
+    `<li><strong>${escapeHtml(n.title || "Notice")}</strong>${n.msg ? " — " + escapeHtml(n.msg) : ""}</li>`
+  ).join("") + `</ul>`;
+}
+
+async function refreshHandover(){
+  try{
+    const res = await fetch(HANDOVER_CSV_URL, { cache:"no-store" });
+    const csv = await res.text();
+    const data = parseCSV(csv);
+    const headers = data[0];
+    const row = data[1] || [];
+    const idx = (n) => headers.indexOf(n);
+
+    const active = (row[idx("Active")] || "").trim().toLowerCase();
+    const msg = (row[idx("Message")] || "").trim();
+    const created = (row[idx("Created")] || "").trim();
+    const ack = (row[idx("Acknowledged")] || "").trim().toLowerCase();
+
+    const state = document.getElementById("handoverState");
+    if (active === "yes" && ack !== "yes" && msg){
+      state.classList.add("active");
+      state.innerHTML = `Active handover<div class="text-xs font-extrabold text-muted" style="margin-top:6px">${escapeHtml(msg)}<br><span style="opacity:.85">Created: ${escapeHtml(created)}</span></div>`;
+    } else {
+      state.classList.remove("active");
+      state.innerHTML = `No active handover<div class="text-xs font-extrabold text-muted" style="margin-top:6px;opacity:.9">Nothing pending for the next shift.</div>`;
+    }
+
+    document.getElementById("plantSummary").innerHTML = buildPlantSummary();
+    document.getElementById("handoverNotices").innerHTML = await loadNoticesForHandover();
+  } catch(e){
+    console.error(e);
+    document.getElementById("handoverState").textContent = "Could not load handover.";
+    document.getElementById("plantSummary").innerHTML = "";
+    document.getElementById("handoverNotices").innerHTML = "";
+  }
+}
+
+async function setHandover(){
+  const message = document.getElementById("handoverMsg").value.trim();
+  if (!message) return toast("Enter a short handover message first.");
+
+  const body = new URLSearchParams({ action:"setHandover", message });
+  toast("Setting handover…", 1500);
+
+  const res = await fetch(WRITE_URL, { method:"POST", body });
+  const text = await res.text();
+
+  if (!String(text).startsWith("OK")) {
+    console.error(text);
+    return toast(text, 4500);
+  }
+
+  toast("Handover set ✅", 2000);
+  document.getElementById("handoverMsg").value = "";
+  await refreshHandover();
+}
+
+async function ackHandover(){
+  const body = new URLSearchParams({ action:"ackHandover" });
+  toast("Acknowledging…", 1500);
+
+  const res = await fetch(WRITE_URL, { method:"POST", body });
+  const text = await res.text();
+
+  if (!String(text).startsWith("OK")) {
+    console.error(text);
+    return toast(text, 4500);
+  }
+
+  toast("Acknowledged ✅", 2000);
+  await refreshHandover();
+}
+
+function switchTab(which){
+  const panels = {
+    update: document.getElementById("tab-update"),
+    handover: document.getElementById("tab-handover"),
+    chemical: document.getElementById("tab-chemical"),
+    clock: document.getElementById("tab-clock"),
+  };
+
+  const buttons = {
+    update: document.getElementById("btnUpdate"),
+    handover: document.getElementById("btnHandover"),
+    chemical: document.getElementById("btnChemical"),
+    clock: document.getElementById("btnClock"),
+  };
+
+  if (!panels[which]) {
+    toast(`ERROR: Tab "${which}" not found in HTML`, 4500);
+    return;
+  }
+
+  Object.keys(panels).forEach(k => {
+    if (panels[k]) panels[k].style.display = (k === which) ? "block" : "none";
+    if (buttons[k]) buttons[k].classList.toggle("active", k === which);
+  });
+
+  if (which === "handover") {
+    if (typeof refreshHandover === "function") refreshHandover();
+  }
+}
+
+// ===== CHEM CALC (Excel-matching rules) =====
+function num(id){
+  const v = document.getElementById(id)?.value;
+  const n = parseFloat(String(v ?? "").replace(/,/g,"").trim());
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function roundup(x, decimals){
+  if (!Number.isFinite(x)) return NaN;
+  const m = Math.pow(10, decimals);
+  return Math.ceil(x * m) / m;
+}
+
+function poolLitres(){
+  const v = num("chemVol");
+  const unit = document.getElementById("chemVolUnit").value;
+  if (!Number.isFinite(v) || v <= 0) return NaN;
+  return unit === "kL" ? v * 1000 : v;
+}
+
+function pureKg(deltaPpm, volL){
+  return (deltaPpm * volL) / 1000000;
+}
+
+function fmt(x, suffix){
+  if (!Number.isFinite(x)) return "—";
+  return `${x.toLocaleString(undefined,{maximumFractionDigits:2})}${suffix||""}`;
+}
+
+function line(title, value){
+  return `<div style="margin:6px 0"><strong>${escapeHtml(title)}:</strong> ${escapeHtml(value)}</div>`;
+}
+
+function nowStamp(){
+  const d = new Date();
+  return d.toLocaleString(undefined,{year:"numeric",month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+}
+
+async function copyText(text){
+  try{
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  }
+}
+
+function buildChemNotes(){
+  if (!chemLast) return "";
+
+  const lines = [];
+  lines.push(`CHEM CALC (${chemLast.volumeKL} kL)`);
+  if (chemLast.fc){
+    lines.push(`FC: ${chemLast.fc.cur} → ${chemLast.fc.tgt} | Dose: ${chemLast.fc.hypoL} L sodium hypo (10.42%) | ${fmt(chemLast.fc.calHypoKg," kg")} cal hypo (62.5%)`);
+  }
+  if (chemLast.ph){
+    lines.push(`pH: ${chemLast.ph.cur} → ${chemLast.ph.tgt} | Dose: ${chemLast.ph.acidL} L sulphuric acid (Excel rule)`);
+  }
+  if (chemLast.alk){
+    lines.push(`ALK: ${chemLast.alk.cur} → ${chemLast.alk.tgt} | Dose: ${fmt(chemLast.alk.bicarbKg," kg")} sodium bicarb`);
+  }
+  if (chemLast.cya){
+    lines.push(`CYA: ${chemLast.cya.cur} → ${chemLast.cya.tgt} | Dose: ${chemLast.cya.cyaKg} kg cyanuric acid`);
+  }
+  if (chemLast.ch){
+    lines.push(`CH: ${chemLast.ch.cur} → ${chemLast.ch.tgt} | Dose: ${chemLast.ch.caCl2Kg} kg calcium chloride (91%)`);
+  }
+  if (chemLast.thioKg !== null){
+    lines.push(`If reducing FC: Thiosulphate (Excel rule): ${fmt(chemLast.thioKg," kg")}`);
+  }
+  lines.push(`Timestamp: ${nowStamp()}`);
+  return lines.join("\n");
+}
+
+async function copyChemNotes(addToHandover=false){
+  if (!chemLast) return toast("Run Calculate first.", 2000);
+
+  const text = buildChemNotes();
+  const ok = await copyText(text);
+
+  if (addToHandover){
+    switchTab("handover");
+    const box = document.getElementById("handoverMsg");
+    if (box){
+      box.value = (box.value.trim() ? box.value.trim() + "\n\n" : "") + text;
+    }
+    await refreshHandover();
+  }
+
+  toast(ok ? "Copied ✅" : "Copy failed (browser)", 2200);
+}
+
+function runChem(){
+  const V = poolLitres();
+  if (!Number.isFinite(V)) return toast("Enter a valid pool volume.", 2200);
+
+  const volumeKL = Math.round(V / 1000);
+
+  const curFC = num("curFC");
+  const curPH = num("curPH");
+  const curALK = num("curALK");
+  const curCYA = num("curCYA");
+  const curCH = num("curCH");
+
+  const tFC = num("tFC");
+  const tPH = num("tPH");
+  const tALK = num("tALK");
+  const tCYA = num("tCYA");
+  const tCH = num("tCH");
+
+  let out = "";
+  const snap = { volumeKL, fc:null, ph:null, alk:null, cya:null, ch:null, thioKg:null };
+
+  if (Number.isFinite(curFC) && Number.isFinite(tFC)) {
+    const d = tFC - curFC;
+    const Fkg = pureKg(d, V);
+
+    const strengthHypo = 10.42 / 100;
+    const densityHypo = 1.2;
+    const Lhypo = (Fkg / strengthHypo) / densityHypo;
+    const LhypoOut = roundup(Math.max(Lhypo, 0), 0);
+
+    const strengthCal = 62.5 / 100;
+    const kgCal = Math.max(Fkg / strengthCal, 0);
+
+    out += `<div style="margin-top:10px;font-weight:900">Chlorine</div>`;
+    out += line("Sodium Hypochlorite (10.42%)", fmt(LhypoOut, " L"));
+    out += line("Calcium Hypochlorite (62.5%)", fmt(kgCal, " kg"));
+
+    const thioKg = Math.max((curFC - tFC) / 1, 0);
+    snap.thioKg = thioKg;
+
+    snap.fc = { cur: curFC, tgt: tFC, hypoL: LhypoOut, calHypoKg: kgCal };
+  } else {
+    out += `<div style="margin-top:10px;font-weight:900">Chlorine</div>`;
+    out += `<div class="text-xs font-extrabold text-muted">Enter current + target Free Chlorine to calculate.</div>`;
+    snap.thioKg = null;
+  }
+
+  if (Number.isFinite(curPH) && Number.isFinite(tPH)) {
+    const steps = Math.max((curPH - tPH) / 0.1, 0);
+    const acidL = roundup(steps * 10 * V / 1000000, 1);
+
+    out += `<div style="margin-top:14px;font-weight:900">pH</div>`;
+    out += line("Sulphuric Acid (Excel rule)", fmt(acidL, " L"));
+
+    snap.ph = { cur: curPH, tgt: tPH, acidL };
+  } else {
+    out += `<div style="margin-top:14px;font-weight:900">pH</div>`;
+    out += `<div class="text-xs font-extrabold text-muted">Enter current + target pH to calculate.</div>`;
+  }
+
+  if (Number.isFinite(curALK) && Number.isFinite(tALK)) {
+    const d = tALK - curALK;
+    const kg = Math.max(pureKg(d, V), 0);
+
+    out += `<div style="margin-top:14px;font-weight:900">Alkalinity</div>`;
+    out += line("Sodium Bicarbonate", fmt(kg, " kg"));
+
+    snap.alk = { cur: curALK, tgt: tALK, bicarbKg: kg };
+  } else {
+    out += `<div style="margin-top:14px;font-weight:900">Alkalinity</div>`;
+    out += `<div class="text-xs font-extrabold text-muted">Enter current + target alkalinity to calculate.</div>`;
+  }
+
+  if (Number.isFinite(curCYA) && Number.isFinite(tCYA)) {
+    const d = tCYA - curCYA;
+    const kg = roundup(Math.max(pureKg(d, V), 0), 0);
+
+    out += `<div style="margin-top:14px;font-weight:900">Cyanuric Acid</div>`;
+    out += line("Cyanuric Acid", fmt(kg, " kg"));
+
+    snap.cya = { cur: curCYA, tgt: tCYA, cyaKg: kg };
+  } else {
+    out += `<div style="margin-top:14px;font-weight:900">Cyanuric Acid</div>`;
+    out += `<div class="text-xs font-extrabold text-muted">Enter current + target CYA to calculate.</div>`;
+  }
+
+  if (Number.isFinite(curCH) && Number.isFinite(tCH)) {
+    const d = tCH - curCH;
+    const Fkg = pureKg(d, V);
+    const strength = 0.91;
+    const kg = roundup(Math.max(Fkg / strength, 0), 1);
+
+    out += `<div style="margin-top:14px;font-weight:900">Calcium Hardness</div>`;
+    out += line("Calcium Chloride (91%)", fmt(kg, " kg"));
+
+    snap.ch = { cur: curCH, tgt: tCH, caCl2Kg: kg };
+  } else {
+    out += `<div style="margin-top:14px;font-weight:900">Calcium Hardness</div>`;
+    out += `<div class="text-xs font-extrabold text-muted">Enter current + target calcium hardness to calculate.</div>`;
+  }
+
+  document.getElementById("chemResults").innerHTML = out;
+  chemLast = snap;
+  toast("Calculated ✅", 1200);
+}
+
+// Boot
 wireStatusButtons();
 loadPlant().then(() => {
   const aud = document.getElementById("audience");
@@ -360,6 +826,7 @@ loadPlant().then(() => {
 const ZOOMSHIFT_CLOCK_URL = "https://app.zoomshift.com/clm058b/time_clock";
 function openClockSameTab(){ window.location.href = ZOOMSHIFT_CLOCK_URL; }
 function openClockNewTab(){ window.open(ZOOMSHIFT_CLOCK_URL, "_blank", "noopener"); }
+
 </script>
 </body>
 </html>
