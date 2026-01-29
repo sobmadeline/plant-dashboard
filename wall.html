@@ -3,186 +3,107 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Plant Status – Wall</title>
-  <style>
-    :root{
-      --pindan:#C54B00;
-      --dark-turq:#004153;
-      --bg:#07141a;
-      --card:#0b2028;
-      --text:#f8fafc;
-      --muted:#cbd5e1;
-      --line:#14313b;
+  <title>BRAC Tools - Wall Dashboard</title>
 
-      --red:#b91c1c;
-      --amber:#ca8a04;
-      --green:#15803d;
-      --blue:#2563eb;
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pindan: "#C54B00",
+            darkturq: "#004153",
+            bg: "#07141a",
+            card: "#0b2028",
+            line: "#14313b",
+            muted: "#cbd5e1",
+            redx: "#b91c1c",
+            amberx:"#ca8a04",
+            greenx:"#15803d",
+            bluex:"#2563eb"
+          }
+        }
+      }
     }
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
-
-    header{
-      background:var(--dark-turq);
-      padding:16px 18px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:16px;
-    }
-    .brand{display:flex;align-items:center;gap:14px}
-    .logo{
-      width:46px;height:46px;border-radius:10px;
-      background:var(--pindan);color:white;
-      display:flex;align-items:center;justify-content:center;
-      font-weight:900;letter-spacing:.04em;
-    }
-    .titles .h1{font-size:22px;font-weight:900}
-    .titles .h2{font-size:14px;opacity:.85;margin-top:2px}
-    .meta{font-size:14px;color:var(--muted);text-align:right;line-height:1.4}
-
-    .wrap{padding:16px 18px 14px}
-
-    /* Top tiles */
-    .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
-    .tile{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:14px 16px;
-      min-height:92px;
-      display:flex;flex-direction:column;justify-content:space-between;
-    }
-    .tile .label{font-size:13px;color:var(--muted);font-weight:900;letter-spacing:.06em}
-    .tile .value{font-size:34px;font-weight:900}
-    .tile.offline{background:linear-gradient(0deg, rgba(185,28,28,.25), rgba(185,28,28,.25)), var(--card)}
-    .tile.degraded{background:linear-gradient(0deg, rgba(202,138,4,.25), rgba(202,138,4,.25)), var(--card)}
-    .tile.planned{background:linear-gradient(0deg, rgba(37,99,235,.22), rgba(37,99,235,.22)), var(--card)}
-    .tile.operational{background:linear-gradient(0deg, rgba(21,128,61,.25), rgba(21,128,61,.25)), var(--card)}
-
-    /* Handover banner */
-    .handover{
-      display:none;
-      margin:12px 0 14px;
-      border-radius:14px;
-      border:1px solid var(--pindan);
-      background:rgba(197,75,0,.14);
-      padding:12px 14px;
-      font-weight:900;
-      line-height:1.25;
-    }
-    .handover .sub{font-size:12px;color:var(--muted);font-weight:800;margin-top:6px}
-
-    /* Bottom grid: Status left, Notices right */
-    .bottom{display:grid;grid-template-columns:2fr 1.2fr;gap:12px;align-items:start}
-    .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-    .panel-head{
-      padding:12px 14px;background:#071d24;border-bottom:1px solid var(--line);
-      display:flex;align-items:center;justify-content:space-between;gap:10px
-    }
-    .panel-head .title{font-size:13px;color:var(--muted);font-weight:900;letter-spacing:.08em;text-transform:uppercase}
-    .panel-head .sub{font-size:12px;color:var(--muted);opacity:.9}
-
-    /* System cards */
-    .systems{display:grid;grid-template-columns:repeat(2, 1fr);gap:12px;padding:12px}
-    .sys{
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:12px;
-      background:#06181f;
-      min-height:140px;
-      display:flex;flex-direction:column;gap:10px;
-    }
-    .sys-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .sys-name{font-weight:900;font-size:18px;letter-spacing:.02em}
-    .badge{font-weight:900;font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);letter-spacing:.04em}
-    .b-red{background:rgba(185,28,28,.22);color:#fecaca}
-    .b-amber{background:rgba(202,138,4,.22);color:#fde68a}
-    .b-green{background:rgba(21,128,61,.22);color:#bbf7d0}
-    .b-blue{background:rgba(37,99,235,.18);color:#bfdbfe}
-
-    .items{display:flex;flex-direction:column;gap:8px}
-    .item{display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .item .left{display:flex;align-items:center;gap:10px;min-width:0}
-    .dot{width:12px;height:12px;border-radius:999px;border:1px solid var(--line);flex:0 0 auto}
-    .dot.red{background:var(--red)}
-    .dot.amber{background:var(--amber)}
-    .dot.green{background:var(--green)}
-    .dot.blue{background:var(--blue)}
-    .item .label{font-size:14px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-    /* Notices */
-    .notices{padding:12px;display:flex;flex-direction:column;gap:10px}
-    .notice{border:1px solid var(--line);border-radius:14px;background:#06181f;padding:10px 12px;display:flex;gap:10px}
-    .tag{width:10px;border-radius:8px;background:var(--pindan)}
-    .notice .body{display:flex;flex-direction:column;gap:4px;min-width:0}
-    .notice .t{font-weight:900;font-size:13px;letter-spacing:.02em}
-    .notice .m{font-size:13px;color:var(--muted);font-weight:800;line-height:1.25}
-    .notice .meta{font-size:11px;color:var(--muted);opacity:.85;text-align:left}
-
-    footer{padding:10px 18px 14px;color:var(--muted);font-size:12px;display:flex;justify-content:space-between;gap:10px;opacity:.9}
-
-    @media (max-width: 1000px){
-      .tiles{grid-template-columns:repeat(2,1fr)}
-      .bottom{grid-template-columns:1fr}
-      .systems{grid-template-columns:1fr}
-    }
-  </style>
+  </script>
 </head>
-<body>
-  <header>
-    <div class="brand">
-      <div class="logo">LOGO</div>
-      <div class="titles">
-        <div class="h1">LIVE PLANT STATUS</div>
-        <div class="h2">Aquatic Facility – 25m Pool</div>
+
+<body class="m-0 font-sans bg-bg text-slate-50">
+  <header class="bg-darkturq px-5 py-4 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-3.5">
+      <div class="w-[46px] h-[46px] rounded-xl bg-pindan text-white flex items-center justify-center font-black tracking-wide">LOGO</div>
+      <div>
+        <div class="text-[22px] font-black">LIVE PLANT STATUS</div>
+        <div class="text-sm opacity-85 mt-0.5">Aquatic Facility – 25m Pool</div>
       </div>
     </div>
-    <div class="meta">
+    <div class="text-sm font-bold text-muted text-right leading-snug">
       <div id="lastUpdated">Last updated: —</div>
       <div id="refreshedAt">Refreshed: —</div>
     </div>
   </header>
 
-  <div class="wrap">
-    <section class="tiles">
-      <div class="tile offline"><div class="label">OFFLINE</div><div class="value" id="cntOffline">—</div></div>
-      <div class="tile degraded"><div class="label">DEGRADED</div><div class="value" id="cntDegraded">—</div></div>
-      <div class="tile planned"><div class="label">PLANNED</div><div class="value" id="cntPlanned">—</div></div>
-      <div class="tile operational"><div class="label">OPERATIONAL</div><div class="value" id="cntOperational">—</div></div>
-    </section>
-
-    <div class="handover" id="handoverBanner">
-      HANDOVER ACTIVE: <span id="handoverMsg"></span>
-      <div class="sub" id="handoverMeta"></div>
-    </div>
-
-    <section class="bottom">
-      <div class="panel">
-        <div class="panel-head">
-          <div class="title">Status by system</div>
-          <div class="sub">Worst status shown per system</div>
-        </div>
-        <div class="systems" id="systems"></div>
+  <div class="px-5 pt-4 pb-3">
+    <!-- Top tiles -->
+    <section class="grid grid-cols-4 gap-3 mb-4 max-[1000px]:grid-cols-2">
+      <div class="rounded-2xl border border-line bg-card p-4 min-h-[92px] flex flex-col justify-between"
+           style="background: linear-gradient(0deg, rgba(185,28,28,.25), rgba(185,28,28,.25)), #0b2028;">
+        <div class="text-[13px] text-muted font-black tracking-widest">OFFLINE</div>
+        <div class="text-[34px] font-black" id="cntOffline">—</div>
       </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <div class="title">Noticeboard</div>
-          <div class="sub">Short operational notices</div>
+      <div class="rounded-2xl border border-line bg-card p-4 min-h-[92px] flex flex-col justify-between"
+           style="background: linear-gradient(0deg, rgba(202,138,4,.25), rgba(202,138,4,.25)), #0b2028;">
+        <div class="text-[13px] text-muted font-black tracking-widest">DEGRADED</div>
+        <div class="text-[34px] font-black" id="cntDegraded">—</div>
+      </div>
+
+      <div class="rounded-2xl border border-line bg-card p-4 min-h-[92px] flex flex-col justify-between"
+           style="background: linear-gradient(0deg, rgba(37,99,235,.22), rgba(37,99,235,.22)), #0b2028;">
+        <div class="text-[13px] text-muted font-black tracking-widest">PLANNED</div>
+        <div class="text-[34px] font-black" id="cntPlanned">—</div>
+      </div>
+
+      <div class="rounded-2xl border border-line bg-card p-4 min-h-[92px] flex flex-col justify-between"
+           style="background: linear-gradient(0deg, rgba(21,128,61,.25), rgba(21,128,61,.25)), #0b2028;">
+        <div class="text-[13px] text-muted font-black tracking-widest">OPERATIONAL</div>
+        <div class="text-[34px] font-black" id="cntOperational">—</div>
+      </div>
+    </section>
+
+    <!-- Handover banner -->
+    <div id="handoverBanner"
+         class="hidden my-3 rounded-2xl border border-pindan bg-pindan/15 p-3 font-black leading-snug">
+      HANDOVER ACTIVE: <span id="handoverMsg"></span>
+      <div id="handoverMeta" class="text-xs font-extrabold text-muted mt-1.5"></div>
+    </div>
+
+    <!-- Bottom -->
+    <section class="grid grid-cols-[2fr_1.2fr] gap-3 items-start max-[1000px]:grid-cols-1">
+      <div class="rounded-2xl border border-line bg-card overflow-hidden">
+        <div class="px-4 py-3 bg-[#071d24] border-b border-line flex items-center justify-between gap-2">
+          <div class="text-[13px] text-muted font-black tracking-widest uppercase">Status by system</div>
+          <div class="text-xs text-muted opacity-90 font-extrabold">Worst status shown per system</div>
         </div>
-        <div class="notices" id="notices"></div>
+        <div id="systems" class="grid grid-cols-2 gap-3 p-3 max-[1000px]:grid-cols-1"></div>
+      </div>
+
+      <div class="rounded-2xl border border-line bg-card overflow-hidden">
+        <div class="px-4 py-3 bg-[#071d24] border-b border-line flex items-center justify-between gap-2">
+          <div class="text-[13px] text-muted font-black tracking-widest uppercase">Noticeboard</div>
+          <div class="text-xs text-muted opacity-90 font-extrabold">Short operational notices</div>
+        </div>
+        <div id="notices" class="p-3 flex flex-col gap-2.5"></div>
       </div>
     </section>
   </div>
 
-  <footer>
+  <footer class="px-5 pb-4 text-xs font-extrabold text-muted opacity-90 flex justify-between gap-2">
     <div>Internal Operations Dashboard</div>
     <div>Display only</div>
   </footer>
 
 <script>
-  // === LIVE DATA URLS (already filled) ===
   const PLANT_CSV_URL =
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=0&single=true&output=csv";
 
@@ -192,7 +113,7 @@
   const HANDOVER_CSV_URL =
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=871823190&single=true&output=csv";
 
-  const REFRESH_MS = 5000; 
+  const REFRESH_MS = 5000;
 
   function fmtTime(d){
     return d.toLocaleString(undefined, { year:"numeric", month:"short", day:"2-digit", hour:"2-digit", minute:"2-digit" });
@@ -246,40 +167,20 @@
     return 4;
   }
 
-  function dotClass(status){
-    const s = normStatus(status);
-    if (s === "Offline") return "red";
-    if (s === "Degraded") return "amber";
-    if (s === "Planned Maintenance") return "blue";
-    return "green";
+  function systemKeyFromRow(row){
+    const sys = (row.system || "").trim().toLowerCase();
+    if (sys === "pump" || sys === "pumps") return "PUMPS";
+    if (sys === "filtration" || sys === "filters") return "FILTERS";
+    if (sys === "heating") return "HEATING";
+    if (sys === "disinfection" || sys === "uv") return "DISINFECTION";
+
+    const id = (row.id || "").trim().toUpperCase();
+    if (id.startsWith("PUMP")) return "PUMPS";
+    if (id.startsWith("FIL")) return "FILTERS";
+    if (id.startsWith("HEAT")) return "HEATING";
+    if (id.startsWith("UV")) return "UV";
+    return "OTHER";
   }
-
-  function badgeClass(status){
-    const s = normStatus(status);
-    if (s === "Offline") return "b-red";
-    if (s === "Degraded") return "b-amber";
-    if (s === "Planned Maintenance") return "b-blue";
-    return "b-green";
-  }
-
-function systemKeyFromRow(row){
-  const sys = (row.system || "").trim().toLowerCase();
-
-  if (sys === "pump" || sys === "pumps") return "PUMPS";
-  if (sys === "filtration" || sys === "filters") return "FILTERS";
-  if (sys === "heating") return "HEATING";
-  if (sys === "disinfection" || sys === "uv") return "DISINFECTION";
-
-  // fallback to Component ID prefix
-  const id = (row.id || "").trim().toUpperCase();
-  if (id.startsWith("PUMP")) return "PUMPS";
-  if (id.startsWith("FIL")) return "FILTERS";
-  if (id.startsWith("HEAT")) return "HEATING";
-  if (id.startsWith("UV")) return "UV";
-
-  return "OTHER";
-}
-
 
   function prettySystemName(key){
     const k = String(key || "").toUpperCase();
@@ -287,7 +188,26 @@ function systemKeyFromRow(row){
     if (k === "FILTERS") return "FILTERS";
     if (k === "HEATING") return "HEATING";
     if (k === "UV") return "UV";
+    if (k === "DISINFECTION") return "DISINFECTION";
     return k || "OTHER";
+  }
+
+  function badgeClasses(status){
+    const s = normStatus(status);
+    const base = "font-black text-xs px-2.5 py-1 rounded-full border border-line tracking-wide";
+    if (s === "Offline") return base + " bg-redx/25 text-red-200";
+    if (s === "Degraded") return base + " bg-amberx/25 text-amber-200";
+    if (s === "Planned Maintenance") return base + " bg-bluex/20 text-blue-200";
+    return base + " bg-greenx/25 text-green-200";
+  }
+
+  function dotClasses(status){
+    const s = normStatus(status);
+    const base = "w-3 h-3 rounded-full border border-line flex-none";
+    if (s === "Offline") return base + " bg-redx";
+    if (s === "Degraded") return base + " bg-amberx";
+    if (s === "Planned Maintenance") return base + " bg-bluex";
+    return base + " bg-greenx";
   }
 
   function isActiveNotice(startStr, endStr){
@@ -322,7 +242,6 @@ function systemKeyFromRow(row){
       updated: (r[iUpdated] || "").trim()
     })).filter(x => x.id && x.name);
 
-    // Counts & max updated
     const counts = { Offline:0, Degraded:0, Planned:0, Operational:0 };
     let maxUpdated = null;
 
@@ -344,7 +263,6 @@ function systemKeyFromRow(row){
     document.getElementById("lastUpdated").textContent =
       "Last updated: " + (maxUpdated ? fmtTime(maxUpdated) : "—");
 
-    // Group into systems
     const groups = new Map();
     for (const it of items){
       const key = systemKeyFromRow(it);
@@ -352,8 +270,7 @@ function systemKeyFromRow(row){
       groups.get(key).push(it);
     }
 
-    // Render system cards (priority order you requested)
-    const order = ["PUMPS", "FILTERS", "HEATING", "UV", "OTHER"];
+    const order = ["PUMPS", "FILTERS", "HEATING", "UV", "DISINFECTION", "OTHER"];
     const container = document.getElementById("systems");
     container.innerHTML = "";
 
@@ -361,28 +278,26 @@ function systemKeyFromRow(row){
       if (!groups.has(key)) continue;
       const list = groups.get(key);
 
-      // Determine worst status
       let worst = "Operational";
       for (const it of list){
         if (statusRank(it.status) < statusRank(worst)) worst = it.status;
       }
 
-      // Sort items within system by severity then name
       list.sort((a,b) => statusRank(a.status) - statusRank(b.status) || a.name.localeCompare(b.name));
 
       const card = document.createElement("div");
-      card.className = "sys";
+      card.className = "rounded-2xl border border-line bg-[#06181f] p-3 min-h-[140px] flex flex-col gap-2.5";
       card.innerHTML = `
-        <div class="sys-top">
-          <div class="sys-name">${escapeHtml(prettySystemName(key))}</div>
-          <span class="badge ${badgeClass(worst)}">${escapeHtml(worst.toUpperCase())}</span>
+        <div class="flex items-center justify-between gap-2.5">
+          <div class="font-black text-lg tracking-wide">${escapeHtml(prettySystemName(key))}</div>
+          <span class="${badgeClasses(worst)}">${escapeHtml(worst.toUpperCase())}</span>
         </div>
-        <div class="items">
+        <div class="flex flex-col gap-2">
           ${list.map(it => `
-            <div class="item">
-              <div class="left">
-                <span class="dot ${dotClass(it.status)}"></span>
-                <span class="label">${escapeHtml(it.name)}</span>
+            <div class="flex items-center justify-between gap-2.5">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="${dotClasses(it.status)}"></span>
+                <span class="font-black text-sm whitespace-nowrap overflow-hidden text-ellipsis">${escapeHtml(it.name)}</span>
               </div>
             </div>
           `).join("")}
@@ -414,43 +329,45 @@ function systemKeyFromRow(row){
       end: (r[iEnd] || "").trim(),
     })).filter(x => x.title || x.msg);
 
-    // Wall view shows active notices (no audience filtering here)
     const active = items.filter(n => isActiveNotice(n.start, n.end)).slice(0, 6);
 
     const container = document.getElementById("notices");
     container.innerHTML = "";
 
-    if (!active.length){
-      container.innerHTML = `
-        <div class="notice">
-          <div class="tag"></div>
-          <div class="body">
-            <div class="t">No active notices</div>
-            <div class="m">Nothing currently posted.</div>
-          </div>
+    const noticeShell = (tagStyle, title, msg, meta) => `
+      <div class="rounded-2xl border border-line bg-[#06181f] p-3 flex gap-3">
+        <div class="w-2.5 rounded-lg" style="${tagStyle}"></div>
+        <div class="min-w-0 flex flex-col gap-1">
+          <div class="font-black text-sm tracking-wide">${title}</div>
+          <div class="text-sm font-extrabold text-muted leading-snug">${msg}</div>
+          <div class="text-[11px] font-extrabold text-muted opacity-85">${meta}</div>
         </div>
-      `;
+      </div>
+    `;
+
+    if (!active.length){
+      container.innerHTML = noticeShell(
+        "background:#C54B00;",
+        "No active notices",
+        "Nothing currently posted.",
+        "Notice"
+      );
       return;
     }
 
     for (const n of active){
-      const el = document.createElement("div");
-      el.className = "notice";
       const cat = (n.cat || "Notice").trim();
-      let tagColor = "var(--pindan)";
-      if (cat.toLowerCase() === "safety") tagColor = "var(--red)";
-      if (cat.toLowerCase() === "ops") tagColor = "var(--amber)";
-      if (cat.toLowerCase() === "info") tagColor = "var(--blue)";
+      let tag = "background:#C54B00;";
+      if (cat.toLowerCase() === "safety") tag = "background:#b91c1c;";
+      if (cat.toLowerCase() === "ops") tag = "background:#ca8a04;";
+      if (cat.toLowerCase() === "info") tag = "background:#2563eb;";
 
-      el.innerHTML = `
-        <div class="tag" style="background:${tagColor}"></div>
-        <div class="body">
-          <div class="t">${escapeHtml(n.title || cat)}</div>
-          <div class="m">${escapeHtml(n.msg)}</div>
-          <div class="meta">${escapeHtml(cat)}${n.end ? " • Ends: " + escapeHtml(n.end) : ""}</div>
-        </div>
-      `;
-      container.appendChild(el);
+      container.innerHTML += noticeShell(
+        tag,
+        escapeHtml(n.title || cat),
+        escapeHtml(n.msg),
+        escapeHtml(cat) + (n.end ? " • Ends: " + escapeHtml(n.end) : "")
+      );
     }
   }
 
@@ -473,9 +390,9 @@ function systemKeyFromRow(row){
     if (active === "yes" && ack !== "yes" && msg){
       document.getElementById("handoverMsg").textContent = msg;
       document.getElementById("handoverMeta").textContent = created ? ("Created: " + created) : "";
-      banner.style.display = "block";
+      banner.classList.remove("hidden");
     } else {
-      banner.style.display = "none";
+      banner.classList.add("hidden");
     }
   }
 
