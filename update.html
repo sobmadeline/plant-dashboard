@@ -57,6 +57,9 @@
     <button class="tab flex-1 rounded-2xl border border-line bg-card px-3 py-3 font-black text-base"
       id="btnChemical" type="button" onclick="switchTab('chemical')">Chemical</button>
 
+    <button class="tab flex-1 rounded-2xl border border-line bg-card px-3 py-3 font-black text-base"
+  id="btnNotices" type="button" onclick="switchTab('notices')">Notice Manager</button>
+
   </div>
 
   <!-- UPDATE TAB -->
@@ -247,43 +250,119 @@
     </div>
   </div>
 
-  <!-- CLOCK TAB -->
-  <div id="tab-clock" class="px-3.5 pt-3.5 pb-5" style="display:none">
-    <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
-      <div class="font-black text-[18px] mb-2">Clock in / out</div>
-      <div class="text-xs font-extrabold text-muted">ZoomShift time clock</div>
+<!-- NOTICES TAB -->
+<div id="tab-notices" class="px-3.5 pt-3.5 pb-5" style="display:none">
+  <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="font-black text-[18px]">Noticeboard Manager</div>
+        <div class="text-xs font-extrabold text-muted mt-1">
+          Create, edit, and remove notices shown on Wall + Handover.
+        </div>
+      </div>
 
-      <button class="w-full mt-3 bg-pindan rounded-2xl px-3 py-3 text-[17px] font-black text-white"
-        type="button" onclick="openClockSameTab()">Open Time Clock (same tab)</button>
-
-      <button class="w-full mt-2 bg-plan rounded-2xl px-3 py-3 text-[17px] font-black text-white"
-        type="button" onclick="openClockNewTab()">Open Time Clock (new tab)</button>
-
-      <div class="text-xs font-extrabold text-muted mt-2">
-        If the embedded view below stays blank, use the buttons above (ZoomShift may block embedding).
+      <div class="flex gap-2">
+        <button class="rounded-2xl px-3 py-2 font-black text-white bg-plan"
+          type="button" onclick="loadNoticesManager(true)">Refresh</button>
       </div>
     </div>
 
-    <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
-      <div class="font-black text-base mb-1.5">Embedded (if supported)</div>
-      <div class="text-xs font-extrabold text-muted mb-2">Best for wall/iPad kiosk use, but depends on ZoomShift settings.</div>
+    <div class="mt-3 flex flex-wrap gap-2 items-center">
+      <label class="text-xs font-extrabold text-muted">View</label>
+      <select id="noticeFilter" class="rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold"
+        onchange="renderNoticesManager()">
+        <option value="active" selected>Active only</option>
+        <option value="all">All (incl. expired/future)</option>
+      </select>
 
-      <div class="border border-line rounded-2xl overflow-hidden bg-[#06181f]">
-        <iframe
-          id="clockFrame"
-          title="ZoomShift Time Clock"
-          src="https://app.zoomshift.com/clm058b/time_clock"
-          class="w-full h-[70vh] border-0"
-          referrerpolicy="no-referrer-when-downgrade"
-        ></iframe>
-      </div>
+      <div class="ml-auto text-xs font-extrabold text-muted" id="noticeCount">—</div>
     </div>
   </div>
 
-  <!-- Toast (keep style.display logic) -->
-  <div id="toast"
-    class="fixed left-1/2 -translate-x-1/2 bottom-4 bg-[#05212a] border border-line px-4 py-3 rounded-2xl max-w-[92vw] font-black z-[999]"
-    style="display:none"></div>
+  <!-- Existing notices -->
+  <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
+    <div class="font-black text-base">Existing notices</div>
+    <div class="text-xs font-extrabold text-muted mt-1">Tap Edit to load into the form below.</div>
+
+    <div id="noticeList" class="mt-3 space-y-2">
+      <div class="text-xs font-extrabold text-muted">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Create / Edit form -->
+  <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
+    <div class="flex items-center justify-between gap-3">
+      <div class="font-black text-base" id="noticeFormTitle">Create new notice</div>
+
+      <button class="rounded-2xl px-3 py-2 font-black text-white bg-[#0f766e]"
+        type="button" onclick="resetNoticeForm()">New</button>
+    </div>
+
+    <!-- Hidden: used for edit mode -->
+    <input type="hidden" id="noticeRow" value="" />
+
+    <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Title</label>
+    <input id="nTitle" placeholder="e.g., Lane 3 closed"
+      class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+
+    <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Message</label>
+    <textarea id="nMsg" placeholder="Short operational notice..."
+      class="w-full min-h-[110px] rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400"></textarea>
+
+    <div class="grid grid-cols-2 gap-2.5 max-[540px]:grid-cols-1 mt-3">
+      <div>
+        <label class="block text-sm font-extrabold text-muted mb-1">Category</label>
+        <select id="nCat" class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base">
+          <option>Notice</option>
+          <option>Safety</option>
+          <option>Ops</option>
+          <option>Info</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-extrabold text-muted mb-1">Audience</label>
+        <select id="nAud" class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base">
+          <option>All</option>
+          <option>Duty Manager</option>
+          <option>Ops</option>
+          <option>Maintenance</option>
+          <option value="custom">Custom… (comma separated)</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="audCustomWrap" class="mt-3" style="display:none">
+      <label class="block text-sm font-extrabold text-muted mb-1">Custom audience (comma separated)</label>
+      <input id="nAudCustom" placeholder="e.g., Duty Manager, Ops"
+        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+      <div class="text-xs font-extrabold text-muted mt-1">Leave blank for All.</div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2.5 max-[540px]:grid-cols-1 mt-3">
+      <div>
+        <label class="block text-sm font-extrabold text-muted mb-1">Start (optional)</label>
+        <input id="nStart" placeholder="YYYY-MM-DD HH:MM"
+          class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+      </div>
+      <div>
+        <label class="block text-sm font-extrabold text-muted mb-1">End (optional)</label>
+        <input id="nEnd" placeholder="YYYY-MM-DD HH:MM"
+          class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+      </div>
+    </div>
+
+    <button class="w-full mt-3 bg-pindan rounded-2xl px-3 py-3 text-[17px] font-black text-white"
+      type="button" onclick="saveNotice()">Save notice</button>
+
+    <button class="w-full mt-2 bg-bad rounded-2xl px-3 py-3 text-[17px] font-black text-white"
+      type="button" onclick="deleteNoticeFromForm()">Delete this notice</button>
+
+    <div class="text-xs font-extrabold text-muted mt-2">
+      Tip: Leave Start/End blank for “always active”. Use End to auto-expire.
+    </div>
+  </div>
+</div>
 
 <script>
 
@@ -582,14 +661,14 @@ function switchTab(which){
     update: document.getElementById("tab-update"),
     handover: document.getElementById("tab-handover"),
     chemical: document.getElementById("tab-chemical"),
-    clock: document.getElementById("tab-clock"),
+    notices: document.getElementById("tab-notices"),
   };
 
   const buttons = {
     update: document.getElementById("btnUpdate"),
     handover: document.getElementById("btnHandover"),
     chemical: document.getElementById("btnChemical"),
-    clock: document.getElementById("btnClock"),
+    notices: document.getElementById("btnNotices"),
   };
 
   if (!panels[which]) {
@@ -605,6 +684,11 @@ function switchTab(which){
   if (which === "handover") {
     if (typeof refreshHandover === "function") refreshHandover();
   }
+
+  if (which === "notices") {
+  if (typeof loadNoticesManager === "function") loadNoticesManager(false);
+  }
+
 }
 
 // ===== CHEM CALC (Excel-matching rules) =====
@@ -811,8 +895,265 @@ function runChem(){
   toast("Calculated ✅", 1200);
 }
 
+  // ===== NOTICES MANAGER =====
+let noticesCache = []; // parsed from NOTICE_CSV_URL with row index
+
+function parseMaybeDate(s){
+  const t = String(s || "").trim();
+  if (!t) return null;
+  const d = new Date(t);
+  return isNaN(d) ? null : d;
+}
+
+function noticeStatus(n){
+  const now = new Date();
+  const start = parseMaybeDate(n.start);
+  const end = parseMaybeDate(n.end);
+
+  const okStart = !n.start || (start && start <= now);
+  const okEnd = !n.end || (end && end >= now);
+
+  if (okStart && okEnd) return "active";
+  if (start && start > now) return "future";
+  if (end && end < now) return "expired";
+  return "other";
+}
+
+function pillClassForStatus(st){
+  if (st === "active") return "bg-good text-white";
+  if (st === "future") return "bg-plan text-white";
+  if (st === "expired") return "bg-[#374151] text-slate-200";
+  return "bg-[#374151] text-slate-200";
+}
+
+function getAudienceValue(){
+  const audSel = document.getElementById("nAud").value;
+  if (audSel === "custom") {
+    const raw = document.getElementById("nAudCustom").value.trim();
+    return raw || "All";
+  }
+  return audSel || "All";
+}
+
+function wireAudienceCustom(){
+  const sel = document.getElementById("nAud");
+  if (!sel) return;
+  sel.addEventListener("change", () => {
+    const wrap = document.getElementById("audCustomWrap");
+    if (!wrap) return;
+    wrap.style.display = (sel.value === "custom") ? "block" : "none";
+  });
+}
+
+async function loadNoticesManager(showToast=true){
+  try{
+    const res = await fetch(NOTICE_CSV_URL, { cache:"no-store" });
+    const csv = await res.text();
+    const rows = parseCSV(csv);
+    const headers = rows[0] || [];
+    const idx = (n) => headers.indexOf(n);
+
+    const iTitle = idx("Title");
+    const iMsg = idx("Message");
+    const iCat = idx("Category");
+    const iStart = idx("Start");
+    const iEnd = idx("End");
+    const iAud = idx("Audience");
+
+    // rowNumber = actual sheet row number (header is row 1)
+    noticesCache = rows.slice(1).map((r, i) => ({
+      rowNumber: i + 2,
+      title: (r[iTitle] || "").trim(),
+      msg: (r[iMsg] || "").trim(),
+      cat: (r[iCat] || "").trim(),
+      start: (r[iStart] || "").trim(),
+      end: (r[iEnd] || "").trim(),
+      aud: (r[iAud] || "").trim(),
+    })).filter(x => x.title || x.msg);
+
+    renderNoticesManager();
+    if (showToast) toast("Notices loaded ✅", 1400);
+  } catch(e){
+    console.error(e);
+    document.getElementById("noticeList").innerHTML =
+      `<div class="text-xs font-extrabold text-muted">Could not load notices.</div>`;
+    if (showToast) toast("Could not load notices", 2400);
+  }
+}
+
+function renderNoticesManager(){
+  const filter = document.getElementById("noticeFilter")?.value || "active";
+  const listEl = document.getElementById("noticeList");
+  if (!listEl) return;
+
+  const filtered = noticesCache
+    .slice()
+    .sort((a,b) => (parseMaybeDate(b.start)?.getTime()||0) - (parseMaybeDate(a.start)?.getTime()||0));
+
+  const shown = (filter === "all")
+    ? filtered
+    : filtered.filter(n => noticeStatus(n) === "active");
+
+  document.getElementById("noticeCount").textContent =
+    `${shown.length} shown • ${noticesCache.length} total`;
+
+  if (!shown.length){
+    listEl.innerHTML = `<div class="text-xs font-extrabold text-muted">No notices in this view.</div>`;
+    return;
+  }
+
+  listEl.innerHTML = shown.map(n => {
+    const st = noticeStatus(n);
+    const pill = st.toUpperCase();
+    const aud = (n.aud || "All").trim();
+
+    return `
+      <div class="border border-line rounded-2xl bg-[#06181f] p-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="font-black text-sm truncate">${escapeHtml(n.title || "Notice")}</div>
+            <div class="text-xs font-extrabold text-muted mt-1 leading-snug">
+              ${escapeHtml(n.msg || "")}
+            </div>
+            <div class="text-[11px] font-extrabold text-muted mt-2 opacity-90">
+              ${escapeHtml(n.cat || "Notice")}
+              • Audience: ${escapeHtml(aud)}
+              ${n.start ? " • Start: " + escapeHtml(n.start) : ""}
+              ${n.end ? " • End: " + escapeHtml(n.end) : ""}
+              • Row: ${n.rowNumber}
+            </div>
+          </div>
+
+          <div class="flex flex-col items-end gap-2 shrink-0">
+            <span class="rounded-full px-2.5 py-1 text-[11px] font-black ${pillClassForStatus(st)}">${pill}</span>
+            <div class="flex gap-2">
+              <button class="rounded-xl px-3 py-2 font-black text-white bg-plan"
+                type="button" onclick="editNotice(${n.rowNumber})">Edit</button>
+              <button class="rounded-xl px-3 py-2 font-black text-white bg-bad"
+                type="button" onclick="deleteNotice(${n.rowNumber})">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function resetNoticeForm(){
+  document.getElementById("noticeRow").value = "";
+  document.getElementById("noticeFormTitle").textContent = "Create new notice";
+  document.getElementById("nTitle").value = "";
+  document.getElementById("nMsg").value = "";
+  document.getElementById("nCat").value = "Notice";
+  document.getElementById("nAud").value = "All";
+  document.getElementById("nAudCustom").value = "";
+  document.getElementById("audCustomWrap").style.display = "none";
+  document.getElementById("nStart").value = "";
+  document.getElementById("nEnd").value = "";
+  toast("New notice form ready", 1200);
+}
+
+function editNotice(rowNumber){
+  const n = noticesCache.find(x => x.rowNumber === rowNumber);
+  if (!n) return toast("Notice not found.", 2000);
+
+  document.getElementById("noticeRow").value = String(rowNumber);
+  document.getElementById("noticeFormTitle").textContent = `Edit notice (Row ${rowNumber})`;
+
+  document.getElementById("nTitle").value = n.title || "";
+  document.getElementById("nMsg").value = n.msg || "";
+  document.getElementById("nCat").value = (n.cat || "Notice") || "Notice";
+
+  const aud = (n.aud || "All").trim();
+  const known = ["All","Duty Manager","Ops","Maintenance"];
+  if (known.includes(aud)){
+    document.getElementById("nAud").value = aud;
+    document.getElementById("audCustomWrap").style.display = "none";
+    document.getElementById("nAudCustom").value = "";
+  } else {
+    document.getElementById("nAud").value = "custom";
+    document.getElementById("audCustomWrap").style.display = "block";
+    document.getElementById("nAudCustom").value = aud;
+  }
+
+  document.getElementById("nStart").value = n.start || "";
+  document.getElementById("nEnd").value = n.end || "";
+
+  toast("Loaded for editing ✅", 1200);
+}
+
+async function saveNotice(){
+  const row = document.getElementById("noticeRow").value.trim();
+  const title = document.getElementById("nTitle").value.trim();
+  const msg = document.getElementById("nMsg").value.trim();
+  const cat = document.getElementById("nCat").value.trim();
+  const aud = getAudienceValue();
+  const start = document.getElementById("nStart").value.trim();
+  const end = document.getElementById("nEnd").value.trim();
+
+  if (!title && !msg) return toast("Add at least a Title or Message.", 2400);
+
+  const action = row ? "updateNotice" : "createNotice";
+
+  const body = new URLSearchParams({
+    action,
+    rowNumber: row,
+    title,
+    message: msg,
+    category: cat,
+    audience: aud,
+    start,
+    end
+  });
+
+  toast(row ? "Saving changes…" : "Creating notice…", 1500);
+
+  const res = await fetch(WRITE_URL, { method:"POST", body });
+  const text = await res.text();
+
+  if (!String(text).startsWith("OK")) {
+    console.error(text);
+    return toast(text || "Save failed", 4500);
+  }
+
+  toast("Saved ✅", 1600);
+  await loadNoticesManager(false);
+  if (!row) resetNoticeForm();
+}
+
+async function deleteNotice(rowNumber){
+  if (!confirm(`Delete notice on row ${rowNumber}?`)) return;
+
+  const body = new URLSearchParams({ action:"deleteNotice", rowNumber: String(rowNumber) });
+  toast("Deleting…", 1500);
+
+  const res = await fetch(WRITE_URL, { method:"POST", body });
+  const text = await res.text();
+
+  if (!String(text).startsWith("OK")) {
+    console.error(text);
+    return toast(text || "Delete failed", 4500);
+  }
+
+  toast("Deleted ✅", 1600);
+  await loadNoticesManager(false);
+
+  // If the form was editing this row, reset it
+  if (document.getElementById("noticeRow").value.trim() === String(rowNumber)) {
+    resetNoticeForm();
+  }
+}
+
+function deleteNoticeFromForm(){
+  const row = document.getElementById("noticeRow").value.trim();
+  if (!row) return toast("Load a notice first (Edit).", 2000);
+  deleteNotice(parseInt(row, 10));
+}
+
+  
 // Boot
 wireStatusButtons();
+wireAudienceCustom();
 loadPlant().then(() => {
   const aud = document.getElementById("audience");
   if (aud) aud.addEventListener("change", refreshHandover);
@@ -821,9 +1162,7 @@ loadPlant().then(() => {
   toast("Could not load sheet data", 2500);
 });
 
-const ZOOMSHIFT_CLOCK_URL = "https://app.zoomshift.com/clm058b/time_clock";
-function openClockSameTab(){ window.location.href = ZOOMSHIFT_CLOCK_URL; }
-function openClockNewTab(){ window.open(ZOOMSHIFT_CLOCK_URL, "_blank", "noopener"); }
+  
 
 </script>
 </body>
