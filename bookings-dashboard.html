@@ -1,1 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BRAC Tools - Bookings Dashboard</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pindan: "#C54B00",
+            darkturq: "#004153",
+            bg: "#07141a",
+            card: "#0b2028",
+            line: "#14313b",
+            muted: "#cbd5e1",
+            good: "#15803d",
+            warn: "#ca8a04",
+            bad: "#b91c1c",
+            plan: "#2563eb",
+            teal: "#0f766e"
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="m-0 font-sans bg-bg text-slate-50">
+  <!-- Header -->
+  <header class="bg-darkturq px-4 py-3.5 flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-pindan text-white flex items-center justify-center font-black tracking-wide">LOGO</div>
+    <div>
+      <div class="text-[18px] font-black leading-tight">Bookings Dashboard</div>
+      <div class="text-[13px] opacity-85 mt-0.5">Broome Recreation & Aquatic Centre</div>
+    </div>
+  </header>
+
+  <div class="px-3.5 pt-3.5 pb-5">
+    <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="font-black text-base">Today’s bookings</div>
+          <div class="text-xs font-extrabold text-muted mt-1">Manual bookings + PerfectMind CSV (latest in Drive folder)</div>
+        </div>
+        <button class="rounded-2xl px-3 py-2 font-black text-white bg-plan"
+          type="button" onclick="loadAll(true)">Refresh</button>
+      </div>
+
+      <div class="mt-3 flex flex-wrap gap-2 items-center">
+        <label class="text-xs font-extrabold text-muted">Date</label>
+        <input id="datePick" type="date"
+          class="rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold"
+          onchange="render()" />
+
+        <a href="./bookings-add.html"
+          class="ml-auto rounded-2xl px-3 py-2 font-black text-white bg-pindan inline-block">
+          + Add booking
+        </a>
+      </div>
+
+      <div class="mt-3 text-xs font-extrabold text-muted" id="sourceInfo">—</div>
+    </div>
+
+    <div id="venueWrap" class="space-y-3"></div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" style="display:none"
+    class="fixed bottom-3 left-1/2 -translate-x-1/2 bg-[#06181f] border border-line rounded-2xl px-4 py-2 text-sm font-black shadow">
+  </div>
+
+<script>
+  // ====== CONFIG ======
+  const WRITE_URL = "https://script.google.com/macros/s/AKfycbzygxLa5-VSIkWuFe1jWt930bK0kMhrn0QKR8aAKFuF5wSaRagoATKWMfESgQu6OkizHQ/exec";
+
+  const VENUES = [
+    "Swimming Pool",
+    "Stadium",
+    "Multipurpose Room",
+    "Tennis Courts",
+    "Outdoor Courts",
+    "Squash Courts",
+    "Medland Pavilion",
+    "Nipper Roe Oval",
+    "Father Mac Oval",
+    "Haynes Oval"
+  ];
+
+  // ====== STATE ======
+  let manualBookings = [];
+  let pmBookings = [];
+  let lastPerfectMindFile = "";
+
+  // ====== UI HELPERS ======
+  function toast(msg, ms=1800){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.style.display = "block";
+    setTimeout(()=> t.style.display="none", ms);
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function toMin(t){
+    // HH:MM -> minutes
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t||"").trim());
+    if (!m) return 999999;
+    return (parseInt(m[1],10)*60) + parseInt(m[2],10);
+  }
+
+  function getSelectedDate(){
+    const el = document.getElementById("datePick");
+    return el.value;
+  }
+
+  // ====== NETWORK ======
+  async function getJSON(url){
+    const res = await fetch(url, { cache:"no-store" });
+    return await res.json();
+  }
+
+  async function loadManual(){
+    const data = await getJSON(`${WRITE_URL}?action=getBookings`);
+    if (!data.ok) throw new Error(data.error || "Manual bookings failed");
+    manualBookings = data.items || [];
+  }
+
+  async function loadPerfectMind(){
+    const data = await getJSON(`${WRITE_URL}?action=getPerfectMind`);
+    if (!data.ok) throw new Error(data.error || "PerfectMind failed");
+    pmBookings = data.items || [];
+    lastPerfectMindFile = data.fileName ? `${data.fileName}` : "";
+    return data;
+  }
+
+  async function deleteManual(rowNumber){
+    if (!confirm(`Delete manual booking row ${rowNumber}?`)) return;
+
+    const body = new URLSearchParams({ action:"deleteBooking", rowNumber:String(rowNumber) });
+    const res = await fetch(WRITE_URL, { method:"POST", body });
+    const text = await res.text();
+    if (!String(text).startsWith("OK")) {
+      console.error(text);
+      return toast(text || "Delete failed", 4500);
+    }
+    toast("Deleted ✅", 1500);
+    await loadAll(false);
+  }
+
+  // ====== MERGE + RENDER ======
+  function mergedForDate(dateStr){
+    const all = []
+      .concat((manualBookings||[]).map(b => ({...b, source:"manual"})))
+      .concat((pmBookings||[]).map(b => ({...b, source:"perfectmind"})));
+
+    return all
+      .filter(b => String(b.date||"").trim() === dateStr)
+      .filter(b => b.venue);
+  }
+
+  function render(){
+    const dateStr = getSelectedDate();
+    const all = mergedForDate(dateStr);
+
+    // group by venue
+    const byVenue = {};
+    VENUES.forEach(v => byVenue[v] = []);
+    all.forEach(b => {
+      const v = b.venue;
+      if (!byVenue[v]) byVenue[v] = [];
+      byVenue[v].push(b);
+    });
+
+    Object.keys(byVenue).forEach(v => {
+      byVenue[v].sort((a,b) => toMin(a.start) - toMin(b.start) || toMin(a.end) - toMin(b.end));
+    });
+
+    // info line
+    const info = document.getElementById("sourceInfo");
+    const manualCount = all.filter(x => x.source === "manual").length;
+    const pmCount = all.filter(x => x.source === "perfectmind").length;
+    info.textContent = `Showing ${all.length} bookings • Manual ${manualCount} • PerfectMind ${pmCount}` +
+      (lastPerfectMindFile ? ` • Latest CSV: ${lastPerfectMindFile}` : "");
+
+    // render venue cards
+    const wrap = document.getElementById("venueWrap");
+    wrap.innerHTML = "";
+
+    VENUES.forEach(venue => {
+      const items = byVenue[venue] || [];
+      wrap.innerHTML += `
+        <div class="bg-card border border-line rounded-2xl p-3.5">
+          <div class="flex items-center justify-between gap-2">
+            <div class="font-black text-base">${escapeHtml(venue)}</div>
+            <div class="text-xs font-extrabold text-muted">${items.length} booking(s)</div>
+          </div>
+
+          <div class="mt-3 space-y-2">
+            ${items.length ? items.map(renderBookingRow).join("") : `<div class="text-xs font-extrabold text-muted">No bookings</div>`}
+          </div>
+        </div>
+      `;
+    });
+  }
+
+  function renderBookingRow(b){
+    const srcPill = b.source === "perfectmind"
+      ? `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-plan text-white">PerfectMind</span>`
+      : `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-teal text-white">Manual</span>`;
+
+    const deleteBtn = (b.source === "manual" && b.rowNumber)
+      ? `<button class="rounded-xl px-3 py-2 font-black text-white bg-bad"
+            type="button" onclick="deleteManual(${b.rowNumber})">Delete</button>`
+      : "";
+
+    const area = (b.area || "").trim();
+    const notes = (b.notes || "").trim();
+
+    return `
+      <div class="border border-line rounded-2xl bg-[#06181f] p-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="font-black text-sm">
+              ${escapeHtml(b.start)}–${escapeHtml(b.end)} • ${escapeHtml(b.name || "Booking")}
+            </div>
+
+            <div class="text-xs font-extrabold text-muted mt-1 leading-snug">
+              ${area ? `Area: ${escapeHtml(area)}` : `&nbsp;`}
+              ${notes ? `<div class="mt-1">Notes: ${escapeHtml(notes)}</div>` : ""}
+            </div>
+          </div>
+
+          <div class="flex flex-col items-end gap-2 shrink-0">
+            ${srcPill}
+            ${deleteBtn}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function loadAll(showToast){
+    try{
+      if (showToast) toast("Loading…", 1200);
+
+      // load both sources in parallel
+      await Promise.all([loadManual(), loadPerfectMind()]);
+      render();
+
+      if (showToast) toast("Loaded ✅", 1200);
+    } catch(e){
+      console.error(e);
+      toast("Load failed (check script / folder ID)", 3500);
+      // still try rendering what we have
+      render();
+    }
+  }
+
+  // ====== BOOT ======
+  (function boot(){
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    document.getElementById("datePick").value = `${yyyy}-${mm}-${dd}`;
+
+    loadAll(true);
+  })();
+</script>
+</body>
+</html>
 
