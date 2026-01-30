@@ -1,1 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>BRAC Tools - Add Booking</title>
 
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pindan: "#C54B00",
+            darkturq: "#004153",
+            bg: "#07141a",
+            card: "#0b2028",
+            line: "#14313b",
+            muted: "#cbd5e1",
+            good: "#15803d",
+            warn: "#ca8a04",
+            bad: "#b91c1c",
+            plan: "#2563eb",
+            teal: "#0f766e"
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="m-0 font-sans bg-bg text-slate-50">
+  <header class="bg-darkturq px-4 py-3.5 flex items-center gap-3">
+    <div class="w-10 h-10 rounded-xl bg-pindan text-white flex items-center justify-center font-black tracking-wide">LOGO</div>
+    <div>
+      <div class="text-[18px] font-black leading-tight">Add Booking</div>
+      <div class="text-[13px] opacity-85 mt-0.5">Manual entry (until PerfectMind integration)</div>
+    </div>
+  </header>
+
+  <div class="px-3.5 pt-3.5 pb-5">
+    <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
+      <div class="flex items-center justify-between gap-2">
+        <div class="font-black text-base">Booking details</div>
+        <a href="./bookings-dashboard.html"
+          class="rounded-2xl px-3 py-2 font-black text-white bg-plan inline-block">
+          Back to dashboard
+        </a>
+      </div>
+
+      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Date</label>
+      <input id="bDate" type="date"
+        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
+
+      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Venue</label>
+      <select id="bVenue"
+        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base">
+        <option>Swimming Pool</option>
+        <option>Stadium</option>
+        <option>Multipurpose Room</option>
+        <option>Tennis Courts</option>
+        <option>Outdoor Courts</option>
+        <option>Squash Courts</option>
+        <option>Medland Pavilion</option>
+        <option>Nipper Roe Oval</option>
+        <option>Father Mac Oval</option>
+        <option>Haynes Oval</option>
+      </select>
+
+      <div class="grid grid-cols-2 gap-2.5 max-[540px]:grid-cols-1 mt-3">
+        <div>
+          <label class="block text-sm font-extrabold text-muted mb-1">Start (HH:MM)</label>
+          <input id="bStart" placeholder="09:00"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+        </div>
+        <div>
+          <label class="block text-sm font-extrabold text-muted mb-1">End (HH:MM)</label>
+          <input id="bEnd" placeholder="10:30"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+        </div>
+      </div>
+
+      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Booking name</label>
+      <input id="bName" placeholder="Customer or organisation name"
+        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+
+      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Area (optional)</label>
+      <input id="bArea" placeholder="Lane 3 / Court 2 / etc"
+        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+
+      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Notes (optional)</label>
+      <textarea id="bNotes" placeholder="Extras / setup requirements"
+        class="w-full min-h-[110px] rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400"></textarea>
+
+      <button class="w-full mt-3 bg-pindan rounded-2xl px-3 py-3 text-[17px] font-black text-white"
+        type="button" onclick="saveBooking()">Save booking</button>
+
+      <div class="text-xs font-extrabold text-muted mt-2">
+        Tip: Use 24-hour time (e.g., 14:30).
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" style="display:none"
+    class="fixed bottom-3 left-1/2 -translate-x-1/2 bg-[#06181f] border border-line rounded-2xl px-4 py-2 text-sm font-black shadow">
+  </div>
+
+<script>
+  const WRITE_URL = "https://script.google.com/macros/s/AKfycbzygxLa5-VSIkWuFe1jWt930bK0kMhrn0QKR8aAKFuF5wSaRagoATKWMfESgQu6OkizHQ/exec";
+
+  function toast(msg, ms=1800){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.style.display = "block";
+    setTimeout(()=> t.style.display="none", ms);
+  }
+
+  function isHHMM(s){
+    return /^([01]?\d|2[0-3]):[0-5]\d$/.test(String(s||"").trim());
+  }
+
+  async function saveBooking(){
+    const date = document.getElementById("bDate").value;
+    const venue = document.getElementById("bVenue").value;
+    const start = document.getElementById("bStart").value.trim();
+    const end = document.getElementById("bEnd").value.trim();
+    const name = document.getElementById("bName").value.trim();
+    const area = document.getElementById("bArea").value.trim();
+    const notes = document.getElementById("bNotes").value.trim();
+
+    if (!date || !venue || !start || !end || !name) return toast("Fill Date, Venue, Start, End, Name.", 2400);
+    if (!isHHMM(start) || !isHHMM(end)) return toast("Use HH:MM (24h), e.g. 09:00", 2600);
+
+    const body = new URLSearchParams({
+      action: "addBooking",
+      date, venue, start, end,
+      name, area, notes
+    });
+
+    toast("Saving…", 1400);
+    const res = await fetch(WRITE_URL, { method:"POST", body });
+    const text = await res.text();
+
+    if (!String(text).startsWith("OK")) {
+      console.error(text);
+      return toast(text || "Save failed", 4500);
+    }
+
+    toast("Saved ✅", 1600);
+    // optional: clear form except date
+    document.getElementById("bStart").value = "";
+    document.getElementById("bEnd").value = "";
+    document.getElementById("bName").value = "";
+    document.getElementById("bArea").value = "";
+    document.getElementById("bNotes").value = "";
+  }
+
+  (function boot(){
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    document.getElementById("bDate").value = `${yyyy}-${mm}-${dd}`;
+  })();
+</script>
+</body>
+</html>
