@@ -166,6 +166,54 @@
       .filter(b => b.venue);
   }
 
+  /**
+ * Group bookings that are the “same booking” but repeated for different areas.
+ * Key = venue + start + end + name (+ source if you want to keep manual/PM separate)
+ */
+  function condenseBookings(list){
+    const map = new Map();
+
+    list.forEach(b => {
+      const key = [
+        normKey(b.venue),
+        normKey(b.start),
+        normKey(b.end),
+        normKey(b.name),
+      ].join("|");
+
+      if (!map.has(key)){
+        map.set(key, {
+          ...b,
+          areas: [],
+          notesList: []
+        });
+      }
+
+      const g = map.get(key);
+      if (b.area) g.areas.push(b.area);
+      if (b.notes) g.notesList.push(b.notes);
+
+      // keep rowNumbers for manual deletes if needed later
+      if (b.source === "manual" && b.rowNumber){
+        g.rowNumbers = g.rowNumbers || [];
+        g.rowNumbers.push(b.rowNumber);
+      }
+    });
+
+    // Finalize
+    return Array.from(map.values()).map(g => {
+      const areas = uniq(g.areas);
+      const notes = uniq(g.notesList).join(" • ");
+
+      return {
+        ...g,
+        areaCombined: areas.join(", "),
+        areasCount: areas.length,
+        notesCombined: notes
+      };
+    });
+  }
+
   function render(){
     const dateStr = getSelectedDate();
     const allRaw = mergedForDate(dateStr);
