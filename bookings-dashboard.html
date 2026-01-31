@@ -155,6 +155,15 @@
     await loadAll(false);
   }
 
+  // ====== HELPER FUNCTIONS FOR DATA CONDENSATION ======
+  function normKey(s){
+    return String(s || "").trim().toLowerCase();
+  }
+
+  function uniq(arr){
+    return Array.from(new Set((arr || []).map(x => String(x||"").trim()).filter(Boolean)));
+  }
+
   // ====== MERGE + RENDER ======
   function mergedForDate(dateStr){
     const all = []
