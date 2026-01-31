@@ -168,7 +168,9 @@
 
   function render(){
     const dateStr = getSelectedDate();
-    const all = mergedForDate(dateStr);
+    const allRaw = mergedForDate(dateStr);
+    const all = condenseBookings(allRaw);
+
 
     // group by venue
     const byVenue = {};
@@ -221,8 +223,9 @@
             type="button" onclick="deleteManual(${b.rowNumber})">Delete</button>`
       : "";
 
-    const area = (b.area || "").trim();
-    const notes = (b.notes || "").trim();
+    const area = (b.areaCombined || b.area || "").trim();
+    const notes = (b.notesCombined || b.notes || "").trim();
+
 
     return `
       <div class="border border-line rounded-2xl bg-[#06181f] p-3">
@@ -233,7 +236,7 @@
             </div>
 
             <div class="text-xs font-extrabold text-muted mt-1 leading-snug">
-              ${area ? `Area: ${escapeHtml(area)}` : `&nbsp;`}
+              ${area ? `Area: ${escapeHtml(area)}${b.areasCount > 1 ? ` <span class="opacity-80">(${b.areasCount} areas)</span>` : ""}` : `&nbsp;`}
               ${notes ? `<div class="mt-1">Notes: ${escapeHtml(notes)}</div>` : ""}
             </div>
           </div>
