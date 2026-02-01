@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+  <title>Aquatic Bookings - BRAC Tools</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pindan: "#C54B00",
+            darkturq: "#004153",
+            bg: "#07141a",
+            card: "#0b2028",
+            line: "#14313b",
+            muted: "#cbd5e1",
+            good: "#15803d",
+            warn: "#ca8a04",
+            bad: "#b91c1c",
+            plan: "#2563eb",
+            teal: "#0f766e"
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="m-0 font-sans bg-bg text-slate-50 text-[15px] min-h-screen overflow-y-auto">
+  <!-- Header -->
+  <header class="bg-darkturq px-2 py-3.5 md:flex items-center justify-between gap-4">
+  <!-- Left: logo + titles -->
+    <div class="flex items-center gap-3 min-w-0">
+      <a href="index.html" class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide">
+        <img src="./images/WhiteWebsiteLogo.png" alt="BRAC Logo" class="object-contain" />
+      </a>
+      <div class="min-w-0">
+        <div class="text-[18px] font-black leading-tight truncate">Bookings Dashboard</div>
+        <div class="text-[13px] opacity-85 mt-0.5 truncate">Broome Recreation & Aquatic Centre</div>
+        <div class="text-[12px] font-extrabold text-muted mt-0.5 truncate" id="sourceInfo">—</div>
+      </div>
+    </div>
+
+    <!-- Right: controls -->
+    <div class="flex items-center gap-2 shrink-0 md:mt-0 mt-4">
+      <input id="datePick" type="date"
+        class="rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold"
+        onchange="render()" />
+
+      <button class="rounded-2xl px-3 py-2 font-black text-white bg-plan"
+        type="button" onclick="loadAll(true)">Refresh</button>
+
+      <a href="./bookings-add.html"
+        class="rounded-2xl px-3 py-2 font-black text-white bg-pindan inline-block">
+        + Add booking
+      </a>
+    </div>
+  </header>
+
+
+  <div class="px-3.5 pt-3.5 pb-5">
+    <div id="venueWrap"
+     class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 [grid-auto-flow:dense]">
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" style="display:none"
+    class="fixed bottom-3 left-1/2 -translate-x-1/2 bg-[#06181f] border border-line rounded-2xl px-4 py-2 text-sm font-black shadow">
+  </div>
+
+<script>
+  // ====== CONFIG ======
+  const WRITE_URL = "https://script.google.com/macros/s/AKfycbzygxLa5-VSIkWuFe1jWt930bK0kMhrn0QKR8aAKFuF5wSaRagoATKWMfESgQu6OkizHQ/exec";
+
+  const VENUES = [
+    "Swimming Pool",
+  ];
+
+  // ====== STATE ======
+  let manualBookings = [];
+  let pmBookings = [];
+  let lastPerfectMindFile = "";
+
+  // ====== UI HELPERS ======
+  function toast(msg, ms=1800){
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.style.display = "block";
+    setTimeout(()=> t.style.display="none", ms);
+  }
+
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  function toMin(t){
+    // HH:MM -> minutes
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t||"").trim());
+    if (!m) return 999999;
+    return (parseInt(m[1],10)*60) + parseInt(m[2],10);
+  }
+
+  function getSelectedDate(){
+    const el = document.getElementById("datePick");
+    return el.value;
+  }
+
+  // ====== NETWORK ======
+  async function getJSON(url){
+    const res = await fetch(url, { cache:"no-store" });
+    return await res.json();
+  }
+
+  async function loadManual(){
+    const data = await getJSON(`${WRITE_URL}?action=getBookings`);
+    if (!data.ok) throw new Error(data.error || "Manual bookings failed");
+    manualBookings = data.items || [];
+  }
+
+  async function loadPerfectMind(){
+    const data = await getJSON(`${WRITE_URL}?action=getPerfectMind`);
+    if (!data.ok) throw new Error(data.error || "PerfectMind failed");
+    pmBookings = data.items || [];
+    lastPerfectMindFile = data.fileName ? `${data.fileName}` : "";
+    return data;
+  }
+
+  async function deleteManual(rowNumber){
+    if (!confirm(`Delete manual booking row ${rowNumber}?`)) return;
+
+    const body = new URLSearchParams({ action:"deleteBooking", rowNumber:String(rowNumber) });
+    const res = await fetch(WRITE_URL, { method:"POST", body });
+    const text = await res.text();
+    if (!String(text).startsWith("OK")) {
+      console.error(text);
+      return toast(text || "Delete failed", 4500);
+    }
+    toast("Deleted ✅", 1500);
+    await loadAll(false);
+  }
+
+  // ====== HELPER FUNCTIONS FOR DATA CONDENSATION ======
+  function normKey(s){
+    return String(s || "").trim().toLowerCase();
+  }
+
+  function uniq(arr){
+    return Array.from(new Set((arr || []).map(x => String(x||"").trim()).filter(Boolean)));
+  }
+
+  // ====== MERGE + RENDER ======
+  function mergedForDate(dateStr){
+    const all = []
+      .concat((manualBookings||[]).map(b => ({...b, source:"manual"})))
+      .concat((pmBookings||[]).map(b => ({...b, source:"perfectmind"})));
+
+    return all
+      .filter(b => String(b.date||"").trim() === dateStr)
+      .filter(b => b.venue);
+  }
+
+  /**
+ * Group bookings that are the “same booking” but repeated for different areas.
+ * Key = venue + start + end + name (+ source if you want to keep manual/PM separate)
+ */
+  function condenseBookings(list){
+    const map = new Map();
+
+    list.forEach(b => {
+      const key = [
+        normKey(b.venue),
+        normKey(b.start),
+        normKey(b.end),
+        normKey(b.name),
+      ].join("|");
+
+      if (!map.has(key)){
+        map.set(key, {
+          ...b,
+          areas: [],
+          notesList: []
+        });
+      }
+
+      const g = map.get(key);
+      if (b.area) g.areas.push(b.area);
+      if (b.notes) g.notesList.push(b.notes);
+
+      // keep rowNumbers for manual deletes if needed later
+      if (b.source === "manual" && b.rowNumber){
+        g.rowNumbers = g.rowNumbers || [];
+        g.rowNumbers.push(b.rowNumber);
+      }
+    });
+
+    // Finalize
+    return Array.from(map.values()).map(g => {
+      const areas = uniq(g.areas);
+      const notes = uniq(g.notesList).join(" • ");
+
+      return {
+        ...g,
+        areaCombined: areas.join(", "),
+        areasCount: areas.length,
+        notesCombined: notes
+      };
+    });
+  }
+
+  function render(){
+    const dateStr = getSelectedDate();
+    const allRaw = mergedForDate(dateStr);
+    const all = condenseBookings(allRaw);
+
+
+    // group by venue
+    const byVenue = {};
+    VENUES.forEach(v => byVenue[v] = []);
+    all.forEach(b => {
+      const v = b.venue;
+      if (!byVenue[v]) byVenue[v] = [];
+      byVenue[v].push(b);
+    });
+
+    Object.keys(byVenue).forEach(v => {
+      byVenue[v].sort((a,b) => toMin(a.start) - toMin(b.start) || toMin(a.end) - toMin(b.end));
+    });
+
+    // info line
+    const info = document.getElementById("sourceInfo");
+    const manualCount = all.filter(x => x.source === "manual").length;
+    const pmCount = all.filter(x => x.source === "perfectmind").length;
+    info.textContent = `Showing ${all.length} bookings • Manual ${manualCount} • PerfectMind ${pmCount}` +
+      (lastPerfectMindFile ? ` • Latest CSV: ${lastPerfectMindFile}` : "");
+
+    // render venue cards (hide empty) + sort by busyness
+    const wrap = document.getElementById("venueWrap");
+    wrap.innerHTML = "";
+
+    const venuesWithBookings = VENUES
+      .map(v => {
+      const items = byVenue[v] || [];
+      return { venue: v, items, score: venueBusynessScore(items) };
+     })
+     .filter(x => x.items.length > 0)
+     .sort((a, b) => b.score - a.score);
+
+    venuesWithBookings.forEach(({ venue, items }) => {
+      wrap.innerHTML += renderVenueCard(venue, items);
+    });
+
+    // If literally nothing is booked, show a friendly message (instead of blank grid)
+    if (!venuesWithBookings.length){
+      wrap.innerHTML = `
+        <div class="bg-card border border-line rounded-2xl p-4 text-sm font-black text-muted">
+        No bookings today in this location.
+        </div>
+      `;
+    }
+
+
+  }
+
+  function renderVenueCard(venue, items, isEmpty = false){
+    return `
+      <div class="bg-card border border-line rounded-2xl p-3 flex flex-col max-h-[520px]
+                  ${isEmpty ? "opacity-60 order-last" : ""}">
+        <div class="flex items-center justify-between gap-2">
+          <div class="font-black text-base">${escapeHtml(venue)}</div>
+          <div class="text-xs font-extrabold text-muted">
+            ${items.length} booking(s)
+          </div>
+        </div>
+
+        <div class="mt-2 space-y-2 overflow-auto pr-1 flex-1">
+          ${
+            items.length
+              ? items.map(renderBookingRow).join("")
+              : `<div class="text-xs font-extrabold text-muted italic">No bookings</div>`
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  function parseHM(t){
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t||"").trim());
+    if (!m) return null;
+    return { h: parseInt(m[1],10), m: parseInt(m[2],10) };
+  }
+
+  function durationMins(start, end){
+    const s = parseHM(start), e = parseHM(end);
+    if (!s || !e) return 0;
+    return Math.max(0, (e.h*60 + e.m) - (s.h*60 + s.m));
+  }
+
+/**
+ * Higher score = show earlier in grid.
+ * Weight both count + total minutes so a venue with fewer long bookings
+ * doesn't get buried under lots of short ones.
+ */
+  function venueBusynessScore(items){
+  const count = items.length;
+  const mins = items.reduce((sum, b) => sum + durationMins(b.start, b.end), 0);
+  return (count * 10000) + mins; // count dominates, minutes breaks ties
+  }
+
+  function renderVenueCard(venue, items){
+  return `
+    <div class="<div class="bg-card border border-line bg-[#06181f] rounded-2xl p-3">
+      <div class="flex items-center justify-between gap-2">
+        <div class="font-black text-base">${escapeHtml(venue)}</div>
+        <div class="text-xs font-extrabold text-muted">${items.length} booking(s)</div>
+      </div>
+
+      <div class="mt-2 space-y-2 pr-1">
+        ${items.map(renderBookingRow).join("")}
+      </div>
+    </div>
+  `;
+}
+
+
+
+  function renderBookingRow(b){
+    const srcPill = b.source === "perfectmind"
+      ? ``
+      : `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-teal text-white">Manual</span>`;
+
+    const deleteBtn = (b.source === "manual" && b.rowNumber)
+      ? `<button class="rounded-xl px-3 py-2 font-black text-white bg-bad"
+            type="button" onclick="deleteManual(${b.rowNumber})">Delete</button>`
+      : "";
+
+    const area = (b.areaCombined || b.area || "").trim();
+    const notes = (b.notesCombined || b.notes || "").trim();
+
+
+    return `
+      <div class="border border-line rounded-2xl bg-[#06181f] p-2.5">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="font-black text-[15px]">
+              ${escapeHtml(b.start)}–${escapeHtml(b.end)} • ${escapeHtml(b.name || "Booking")}
+            </div>
+
+            <div class="text-xs font-extrabold text-muted mt-1 leading-snug">
+              ${area ? `Area: ${escapeHtml(area)}${b.areasCount > 1 ? ` <span class="opacity-80">(${b.areasCount} areas)</span>` : ""}` : `&nbsp;`}
+              ${notes ? `<div class="mt-1">Notes: ${escapeHtml(notes)}</div>` : ""}
+            </div>
+          </div>
+
+          <div class="flex flex-col items-end gap-2 shrink-0">
+            ${srcPill}
+            ${deleteBtn}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  async function loadAll(showToast){
+    try{
+      if (showToast) toast("Loading…", 1200);
+
+      // load both sources in parallel
+      await Promise.all([loadManual(), loadPerfectMind()]);
+      render();
+
+      if (showToast) toast("Loaded ✅", 1200);
+    } catch(e){
+      console.error(e);
+      toast("Load failed (check script / folder ID)", 3500);
+      // still try rendering what we have
+      render();
+    }
+  }
+
+  // ====== BOOT ======
+  (function boot(){
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const dd = String(d.getDate()).padStart(2,"0");
+    document.getElementById("datePick").value = `${yyyy}-${mm}-${dd}`;
+
+    loadAll(true);
+  })();
+</script>
+</body>
+</html>
