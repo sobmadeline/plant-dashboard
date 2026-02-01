@@ -165,84 +165,152 @@
     <!-- NOTE: This section is identical to what you pasted -->
     <!-- START chemical -->
     <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
-      <div class="font-black text-[18px] mb-2">Chemical calculations</div>
-      <div class="text-xs font-extrabold text-muted">Based on BRAC Aquatic Chemical Calculator (Excel). Default volume is 1,000,000 L.</div>
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="font-black text-[18px]">Chemical calculations</div>
+          <div class="text-xs font-extrabold text-muted mt-1">Select pool volume. “Custom” unlocks manual entry.</div>
+        </div>
 
-      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Pool volume</label>
-      <div class="grid grid-cols-2 gap-2.5 max-[540px]:grid-cols-1">
-        <input id="chemVol" inputmode="decimal" placeholder="1000" value="1000"
-          class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
-        <select id="chemVolUnit" class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base">
-          <option value="kL" selected>kL</option>
-          <option value="L">L</option>
-        </select>
+        <!-- compact current pool readout -->
+        <div class="text-xs font-extrabold text-muted text-right">
+          Volume: <span id="chemVolLabel" class="text-slate-50">1,000 kL</span>
+        </div>
       </div>
-      <div class="text-xs font-extrabold text-muted mt-2">1000 kL = 1,000,000 L</div>
+
+      <!-- Pool tabs -->
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button type="button" class="chemPoolTab px-3 py-2 rounded-xl border border-line bg-[#06181f] font-black text-sm hover:border-pindan"
+          data-pool="main">BRAC 25m & Leisure Pool</button>
+
+        <button type="button" class="chemPoolTab px-3 py-2 rounded-xl border border-line bg-[#06181f] font-black text-sm hover:border-pindan"
+          data-pool="learn">Town Beach Water Park</button>
+
+        <button type="button" class="chemPoolTab px-3 py-2 rounded-xl border border-line bg-[#06181f] font-black text-sm hover:border-pindan"
+          data-pool="splash">Cable Beach Water Park</button>
+
+        <button type="button" class="chemPoolTab px-3 py-2 rounded-xl border border-line bg-[#06181f] font-black text-sm hover:border-pindan"
+          data-pool="custom">Custom</button>
+      </div>
+
+      <!-- Custom volume editor (hidden unless Custom selected) -->
+      <div id="chemCustomWrap" class="mt-3 hidden">
+        <label class="block text-sm font-extrabold text-muted mb-1">Custom pool volume</label>
+        <div class="grid grid-cols-2 gap-2.5 max-[540px]:grid-cols-1">
+          <input id="chemVol" inputmode="decimal" placeholder="1000" value="1000"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
+          <select id="chemVolUnit" class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base">
+            <option value="kL" selected>kL</option>
+            <option value="L">L</option>
+          </select>
+        </div>
+        <div class="text-xs font-extrabold text-muted mt-2" id="chemVolHint">1000 kL = 1,000,000 L</div>
+      </div>
     </div>
 
-    <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
-      <div class="font-black text-base mb-1.5">Current levels</div>
 
-      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Free Chlorine (ppm)</label>
-      <input id="curFC" inputmode="decimal" placeholder="e.g., 3.8"
-        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+    <div class="grid gap-3 lg:grid-cols-2">
+      <!-- Current levels -->
+      <div class="bg-card border border-line rounded-2xl p-3.5 mb-0">
+        <div class="font-black text-base mb-1.5">Current levels</div>
 
-      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">pH</label>
-      <input id="curPH" inputmode="decimal" placeholder="e.g., 7.5"
-        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+          <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Free Chlorine (ppm)</label>
+          <input id="curFC" inputmode="decimal" placeholder="e.g., 3.8"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
 
-      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Alkalinity (ppm)</label>
-      <input id="curALK" inputmode="decimal" placeholder="e.g., 120"
-        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+          <label class="block text-sm font-extrabold text-muted mt-3 mb-1">pH</label>
+          <input id="curPH" inputmode="decimal" placeholder="e.g., 7.5"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
 
-      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Cyanuric Acid (ppm)</label>
-      <input id="curCYA" inputmode="decimal" placeholder="e.g., 45"
-        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+          <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Alkalinity (ppm)</label>
+          <input id="curALK" inputmode="decimal" placeholder="e.g., 120"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
 
-      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Calcium Hardness (ppm)</label>
-      <input id="curCH" inputmode="decimal" placeholder="e.g., 120"
-        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
-    </div>
+          <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Cyanuric Acid (ppm)</label>
+          <input id="curCYA" inputmode="decimal" placeholder="e.g., 45"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
 
-    <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
-      <div class="font-black text-base mb-1.5">Targets</div>
+          <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Calcium Hardness (ppm)</label>
+          <input id="curCH" inputmode="decimal" placeholder="e.g., 120"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+      </div>
+      <!-- Targets -->
+      <div class="bg-card border border-line rounded-2xl p-3.5 mb-0">
+        <div class="font-black text-base mb-1.5">Targets</div>
 
-      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Free Chlorine target (ppm)</label>
-      <input id="tFC" inputmode="decimal" value="6"
-        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
+          <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Free Chlorine target (ppm)</label>
+          <input id="tFC" inputmode="decimal" value="6"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
 
-      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">pH target</label>
-      <input id="tPH" inputmode="decimal" value="7.5"
-        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
+          <label class="block text-sm font-extrabold text-muted mt-3 mb-1">pH target</label>
+          <input id="tPH" inputmode="decimal" value="7.5"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
 
-      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Alkalinity target (ppm)</label>
-      <input id="tALK" inputmode="decimal" value="90"
-        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
+          <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Alkalinity target (ppm)</label>
+          <input id="tALK" inputmode="decimal" value="90"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
 
-      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Cyanuric Acid target (ppm)</label>
-      <input id="tCYA" inputmode="decimal" value="45"
-        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
+          <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Cyanuric Acid target (ppm)</label>
+          <input id="tCYA" inputmode="decimal" value="45"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
 
-      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Calcium Hardness target (ppm)</label>
-      <input id="tCH" inputmode="decimal" value="120"
-        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
+          <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Calcium Hardness target (ppm)</label>
+          <input id="tCH" inputmode="decimal" value="120"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base" />
 
-      <button class="w-full mt-3 bg-pindan rounded-2xl px-3 py-3 text-[17px] font-black text-white"
-        type="button" onclick="runChem()">Calculate</button>
+          <button class="w-full mt-3 bg-pindan rounded-2xl px-3 py-3 text-[17px] font-black text-white"
+            type="button" onclick="runChem()">Calculate</button>
 
-      <button class="w-full mt-2 bg-plan rounded-2xl px-3 py-3 text-[17px] font-black text-white"
-        type="button" onclick="copyChemNotes(false)">Copy to notes</button>
+          <button class="w-full mt-2 bg-plan rounded-2xl px-3 py-3 text-[17px] font-black text-white"
+            type="button" onclick="copyChemNotes(false)">Copy to notes</button>
 
-      <button class="w-full mt-2 bg-teal rounded-2xl px-3 py-3 text-[17px] font-black text-white"
-        type="button" onclick="copyChemNotes(true)">Copy + add to handover</button>
+          <button class="w-full mt-2 bg-teal rounded-2xl px-3 py-3 text-[17px] font-black text-white"
+            type="button" onclick="copyChemNotes(true)">Copy + add to handover</button>
 
-      <div class="text-xs font-extrabold text-muted mt-2">Tip: “Copy + add to handover” appends the dosing block into the Handover message box.</div>
+          <div class="text-xs font-extrabold text-muted mt-2">Tip: “Copy + add to handover” appends the dosing block into the Handover message box.</div>
+      </div>
     </div>
 
     <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
       <div class="font-black text-base mb-1.5">Dose results</div>
       <div id="chemResults" class="text-xs font-extrabold text-muted">Enter values and press Calculate.</div>
     </div>
+
+    <!-- Results Modal -->
+    <div id="chemModal" class="fixed inset-0 z-50 hidden">
+      <div class="absolute inset-0 bg-black/60" onclick="closeChemModal()"></div>
+
+      <div class="absolute left-1/2 top-1/2 w-[92vw] max-w-2xl -translate-x-1/2 -translate-y-1/2">
+        <div class="bg-card border border-line rounded-2xl p-4 shadow-xl">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="font-black text-lg">Dose results</div>
+              <div class="text-xs font-extrabold text-muted mt-1" id="chemModalSub">
+                Review dosing before adding chemicals.
+              </div>
+            </div>
+
+            <button type="button"
+              class="rounded-xl px-3 py-2 font-black bg-[#06181f] border border-line hover:border-pindan"
+              onclick="closeChemModal()">
+              Close
+            </button>
+          </div>
+
+          <div class="mt-3 text-sm font-semibold text-slate-100/90 whitespace-pre-wrap" id="chemResultsModal">
+            —
+          </div>
+
+          <div class="mt-4 flex flex-col sm:flex-row gap-2">
+            <button class="w-full bg-plan rounded-2xl px-3 py-3 text-[15px] font-black text-white"
+              type="button" onclick="copyChemNotes(false)">Copy to notes</button>
+
+            <button class="w-full bg-teal rounded-2xl px-3 py-3 text-[15px] font-black text-white"
+              type="button" onclick="copyChemNotes(true)">Copy + add to handover</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
 
     <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
       <div class="font-black text-base mb-1.5">Safety reminders</div>
@@ -774,7 +842,7 @@ function buildChemNotes(){
     lines.push(`FC: ${chemLast.fc.cur} → ${chemLast.fc.tgt} | Dose: ${chemLast.fc.hypoL} L sodium hypo (10.42%) | ${fmt(chemLast.fc.calHypoKg," kg")} cal hypo (62.5%)`);
   }
   if (chemLast.ph){
-    lines.push(`pH: ${chemLast.ph.cur} → ${chemLast.ph.tgt} | Dose: ${chemLast.ph.acidL} L sulphuric acid (Excel rule)`);
+    lines.push(`pH: ${chemLast.ph.cur} → ${chemLast.ph.tgt} | Dose: ${chemLast.ph.acidL} L sulphuric acid`);
   }
   if (chemLast.alk){
     lines.push(`ALK: ${chemLast.alk.cur} → ${chemLast.alk.tgt} | Dose: ${fmt(chemLast.alk.bicarbKg," kg")} sodium bicarb`);
@@ -786,7 +854,7 @@ function buildChemNotes(){
     lines.push(`CH: ${chemLast.ch.cur} → ${chemLast.ch.tgt} | Dose: ${chemLast.ch.caCl2Kg} kg calcium chloride (91%)`);
   }
   if (chemLast.thioKg !== null){
-    lines.push(`If reducing FC: Thiosulphate (Excel rule): ${fmt(chemLast.thioKg," kg")}`);
+    lines.push(`If reducing Cl: Thiosulphate: ${fmt(chemLast.thioKg," kg")}`);
   }
   lines.push(`Timestamp: ${nowStamp()}`);
   return lines.join("\n");
@@ -862,7 +930,7 @@ function runChem(){
     const acidL = roundup(steps * 10 * V / 1000000, 1);
 
     out += `<div style="margin-top:14px;font-weight:900">pH</div>`;
-    out += line("Sulphuric Acid (Excel rule)", fmt(acidL, " L"));
+    out += line("Sulphuric Acid", fmt(acidL, " L"));
 
     snap.ph = { cur: curPH, tgt: tPH, acidL };
   } else {
@@ -911,10 +979,104 @@ function runChem(){
     out += `<div class="text-xs font-extrabold text-muted">Enter current + target calcium hardness to calculate.</div>`;
   }
 
-  document.getElementById("chemResults").innerHTML = out;
+  // ✅ NEW: show in modal (and optionally keep bottom div updated if it exists)
+  const inline = document.getElementById("chemResults");
+  if (inline) inline.innerHTML = out; // safe if you keep/remove the old results card
+
+  openChemModalHtml(out);
+
   chemLast = snap;
   toast("Calculated ✅", 1200);
 }
+
+function openChemModalHtml(html){
+  const box = document.getElementById("chemResultsModal");
+  const modal = document.getElementById("chemModal");
+  if (!box || !modal) return; // fail safe if modal not on page
+  box.innerHTML = html || "—";
+  modal.classList.remove("hidden");
+}
+
+function closeChemModal(){
+  const modal = document.getElementById("chemModal");
+  if (!modal) return;
+  modal.classList.add("hidden");
+}
+
+// --- POOL PRESETS (edit these volumes to your real pools) ---
+const CHEM_POOLS = {
+  main:   { label: "BRAC 25m & Leisure Pool", vol: 1000, unit: "kL" },
+  learn:  { label: "Town Beach Water Park", vol: 0, unit: "kL" },
+  splash: { label: "Cable Beach Water Park", vol: 0, unit: "kL" },
+  custom: { label: "Custom", vol: null, unit: null }
+};
+
+let selectedChemPool = "main";
+
+function fmtVol(vol, unit){
+  if (vol == null) return "Custom";
+  const n = Number(vol);
+  if (!isFinite(n)) return `${vol} ${unit}`;
+  return `${n.toLocaleString()} ${unit}`;
+}
+
+function setChemPool(poolKey){
+  selectedChemPool = poolKey;
+
+  // tab styling
+  document.querySelectorAll(".chemPoolTab").forEach(btn => {
+    const active = btn.dataset.pool === poolKey;
+    btn.classList.toggle("border-pindan", active);
+    btn.classList.toggle("bg-[#06181f]", !active);
+  });
+
+  const preset = CHEM_POOLS[poolKey];
+  const customWrap = document.getElementById("chemCustomWrap");
+  const label = document.getElementById("chemVolLabel");
+
+  if (poolKey === "custom") {
+    customWrap.classList.remove("hidden");
+    // keep whatever user typed
+    label.textContent = fmtVol(document.getElementById("chemVol").value, document.getElementById("chemVolUnit").value);
+  } else {
+    customWrap.classList.add("hidden");
+
+    // push preset into your existing inputs so runChem() stays unchanged
+    document.getElementById("chemVol").value = preset.vol;
+    document.getElementById("chemVolUnit").value = preset.unit;
+
+    label.textContent = fmtVol(preset.vol, preset.unit);
+  }
+}
+
+// keep label updated when user edits custom volume
+function wireChemVolumeLabel(){
+  const vol = document.getElementById("chemVol");
+  const unit = document.getElementById("chemVolUnit");
+  const label = document.getElementById("chemVolLabel");
+  function update(){ label.textContent = fmtVol(vol.value, unit.value); }
+  vol.addEventListener("input", update);
+  unit.addEventListener("change", update);
+}
+
+function openChemModal(text){
+  document.getElementById("chemResultsModal").textContent = text || "—";
+  document.getElementById("chemModal").classList.remove("hidden");
+}
+
+function closeChemModal(){
+  document.getElementById("chemModal").classList.add("hidden");
+}
+
+// call this once when the chemical tab exists in DOM
+function initChemUI(){
+  document.querySelectorAll(".chemPoolTab").forEach(btn => {
+    btn.addEventListener("click", () => setChemPool(btn.dataset.pool));
+  });
+  wireChemVolumeLabel();
+  setChemPool("main"); // default
+}
+
 
 /***********************
  * NOTICES MANAGER (WRITE) - CHANGED
