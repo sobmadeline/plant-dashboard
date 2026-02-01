@@ -3,24 +3,140 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>BRAC Tools - Index</title>
-  <style>
-    body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#07141a;color:#f8fafc}
-    header{background:#004153;padding:16px;font-weight:900}
-    .wrap{padding:16px;display:grid;gap:12px;max-width:600px}
-    a{display:block;padding:14px 16px;border-radius:14px;background:#0b2028;border:1px solid #14313b;
-      color:#f8fafc;text-decoration:none;font-weight:900}
-    a:hover{border-color:#C54B00}
-    .small{opacity:.8;font-weight:600}
-  </style>
+  <title>BRAC Tools</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pindan: "#C54B00",
+            darkturq: "#004153",
+            bg: "#07141a",
+            card: "#0b2028",
+            line: "#14313b",
+            muted: "#cbd5e1",
+            good: "#15803d",
+            warn: "#ca8a04",
+            bad: "#b91c1c",
+            plan: "#2563eb",
+            teal: "#0f766e"
+          }
+        }
+      }
+    }
+  </script>
 </head>
-<body>
-  <header>BRAC Tools</header>
-  <div class="wrap">
-    <a href="./wall.html">🖥 Wall Dashboard <div class="small">Read-only display, ideal for big screens</div></a>
-    <a href="./bookings-dashboard.html">🖥 Bookings Dashboard <div class="small">Read-only, replacement for the office whiteboard</div></a>
-    <a href="./update.html">📱 Centre Management <div class="small">Touch-friendly interface to update the dashboard</div></a>
-    <a href="./bookings-add.html">📱 Booking Manager <div class="small">Temporary Manager for the Bookings Dashboard until integration with PerfectMind</div></a>
-  </div>
+
+<body class="m-0 font-sans bg-bg text-slate-50 text-[15px] min-h-screen">
+<!-- Header --> 
+<header class="bg-darkturq px-2 py-3.5 md:flex items-center justify-between gap-4"> 
+    <!-- Left: logo + titles --> 
+     <div class="flex items-center gap-3 min-w-0"> 
+        <a href="index.html" class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide"> 
+            <img src="./images/WhiteWebsiteLogo.png" alt="BRAC Logo" class="object-contain" /> 
+        </a> 
+        <div class="min-w-0"> 
+            <div class="text-[18px] font-black leading-tight truncate">BRAC Tools</div> 
+            <div class="text-[13px] opacity-85 mt-0.5 truncate">Broome Recreation & Aquatic Centre</div> 
+        </div> 
+    </div> 
+</header>
+
+  <!-- Main -->
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <!-- 2-column on lg+, stacked on mobile -->
+    <div class="grid gap-6 lg:grid-cols-2 lg:gap-10">
+
+      <!-- Left: Branding panel -->
+      <section class="bg-card border border-line rounded-2xl p-6 lg:p-8">
+        <div class="flex items-start gap-4">
+          <div class="h-14 w-14 rounded-2xl bg-[#06181f] border border-line flex items-center justify-center shrink-0">
+            <!-- big logo mark (optional) -->
+            <span class="text-xl">🛠️</span>
+          </div>
+
+          <div class="min-w-0">
+            <h1 class="text-2xl lg:text-3xl font-black tracking-tight leading-tight">
+              BRAC Tools
+            </h1>
+            <p class="text-muted font-semibold mt-1">
+              Broome Recreation & Aquatic Centre
+            </p>
+            <p class="text-slate-200/90 font-semibold mt-4 leading-relaxed">
+              Quick access to dashboards and management tools.
+              Built for touch screens and wall displays.
+            </p>
+          </div>
+        </div>
+
+        <!-- Optional: little status/help text -->
+        <div class="mt-6 rounded-2xl bg-[#06181f] border border-line p-4">
+          <div class="text-xs font-extrabold text-muted">Tip</div>
+          <div class="mt-1 text-sm font-semibold text-slate-100/90">
+            On a wall display, open a dashboard and press <span class="font-black">F11</span> for full screen.
+          </div>
+        </div>
+      </section>
+
+      <!-- Right: Big button stack -->
+      <section class="flex">
+        <!-- This centers the buttons vertically on desktop, while still fine on mobile -->
+        <div class="w-full flex flex-col gap-3 lg:justify-center">
+
+          <a href="./wall.html"
+             class="block rounded-2xl bg-card border border-line hover:border-pindan
+                    px-5 py-5 lg:py-6 transition-colors">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="text-lg lg:text-xl font-black leading-snug">
+                  🖥 Wall Dashboard
+                </div>
+                <div class="text-sm lg:text-base font-semibold text-muted mt-1 leading-snug">
+                  Read-only display, ideal for big screens
+                </div>
+              </div>
+              <div class="shrink-0 text-muted font-black">→</div>
+            </div>
+          </a>
+
+          <a href="./bookings-dashboard.html"
+             class="block rounded-2xl bg-card border border-line hover:border-pindan
+                    px-5 py-5 lg:py-6 transition-colors">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="text-lg lg:text-xl font-black leading-snug">
+                  🖥 Bookings Dashboard
+                </div>
+                <div class="text-sm lg:text-base font-semibold text-muted mt-1 leading-snug">
+                  Read-only, replacement for the office whiteboard
+                </div>
+              </div>
+              <div class="shrink-0 text-muted font-black">→</div>
+            </div>
+          </a>
+
+          <a href="./update.html"
+             class="block rounded-2xl bg-card border border-line hover:border-pindan
+                    px-5 py-5 lg:py-6 transition-colors">
+            <div class="flex items-start justify-between gap-4">
+              <div class="min-w-0">
+                <div class="text-lg lg:text-xl font-black leading-snug">
+                  📱 Centre Management
+                </div>
+                <div class="text-sm lg:text-base font-semibold text-muted mt-1 leading-snug">
+                  Touch-friendly interface to update the dashboard
+                </div>
+              </div>
+              <div class="shrink-0 text-muted font-black">→</div>
+            </div>
+          </a>
+
+        </div>
+      </section>
+
+    </div>
+  </main>
 </body>
 </html>

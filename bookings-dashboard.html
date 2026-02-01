@@ -30,45 +30,42 @@
   </script>
 </head>
 
-<body class="m-0 font-sans bg-bg text-slate-50 text-[15px]">
+<body class="m-0 font-sans bg-bg text-slate-50 text-[15px] min-h-screen overflow-y-auto">
   <!-- Header -->
-  <header class="bg-darkturq px-4 py-3.5 flex items-center gap-3">
-    <div class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide">
-      <img src="./images/WhiteWebsiteLogo.png" alt="BRAC Logo" class="object-contain" />
+  <header class="bg-darkturq px-2 py-3.5 md:flex items-center justify-between gap-4">
+  <!-- Left: logo + titles -->
+    <div class="flex items-center gap-3 min-w-0">
+      <a href="index.html" class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide">
+        <img src="./images/WhiteWebsiteLogo.png" alt="BRAC Logo" class="object-contain" />
+      </a>
+      <div class="min-w-0">
+        <div class="text-[18px] font-black leading-tight truncate">Bookings Dashboard</div>
+        <div class="text-[13px] opacity-85 mt-0.5 truncate">Broome Recreation & Aquatic Centre</div>
+        <div class="text-[12px] font-extrabold text-muted mt-0.5 truncate" id="sourceInfo">—</div>
+      </div>
     </div>
-    <div>
-      <div class="text-[18px] font-black leading-tight">Bookings Dashboard</div>
-      <div class="text-[13px] opacity-85 mt-0.5">Broome Recreation & Aquatic Centre</div>
+
+    <!-- Right: controls -->
+    <div class="flex items-center gap-2 shrink-0 md:mt-0 mt-4">
+      <input id="datePick" type="date"
+        class="rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold"
+        onchange="render()" />
+
+      <button class="rounded-2xl px-3 py-2 font-black text-white bg-plan"
+        type="button" onclick="loadAll(true)">Refresh</button>
+
+      <a href="./bookings-add.html"
+        class="rounded-2xl px-3 py-2 font-black text-white bg-pindan inline-block">
+        + Add booking
+      </a>
     </div>
   </header>
 
+
   <div class="px-3.5 pt-3.5 pb-5">
-    <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
-      <div class="flex items-start justify-between gap-3">
-        <div>
-          <div class="font-black text-base">Today’s bookings</div>
-          <div class="text-xs font-extrabold text-muted mt-1">Manual bookings + PerfectMind CSV (latest in Drive folder)</div>
-        </div>
-        <button class="rounded-2xl px-3 py-2 font-black text-white bg-plan"
-          type="button" onclick="loadAll(true)">Refresh</button>
-      </div>
-
-      <div class="mt-3 flex flex-wrap gap-2 items-center">
-        <label class="text-xs font-extrabold text-muted">Date</label>
-        <input id="datePick" type="date"
-          class="rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold"
-          onchange="render()" />
-
-        <a href="./bookings-add.html"
-          class="ml-auto rounded-2xl px-3 py-2 font-black text-white bg-pindan inline-block">
-          + Add booking
-        </a>
-      </div>
-
-      <div class="mt-3 text-xs font-extrabold text-muted" id="sourceInfo">—</div>
+    <div id="venueWrap"
+     class="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 [grid-auto-flow:dense]">
     </div>
-
-    <div id="venueWrap" class="grid gap-3 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3"></div>
   </div>
 
   <!-- Toast -->
@@ -254,30 +251,99 @@
     info.textContent = `Showing ${all.length} bookings • Manual ${manualCount} • PerfectMind ${pmCount}` +
       (lastPerfectMindFile ? ` • Latest CSV: ${lastPerfectMindFile}` : "");
 
-    // render venue cards
+    // render venue cards (hide empty) + sort by busyness
     const wrap = document.getElementById("venueWrap");
     wrap.innerHTML = "";
 
-    VENUES.forEach(venue => {
-      const items = byVenue[venue] || [];
-      wrap.innerHTML += `
-        <div class="bg-card border border-line rounded-2xl p-3">
-          <div class="flex items-center justify-between gap-2">
-            <div class="font-black text-base">${escapeHtml(venue)}</div>
-            <div class="text-xs font-extrabold text-muted">${items.length} booking(s)</div>
-          </div>
+    const venuesWithBookings = VENUES
+      .map(v => {
+      const items = byVenue[v] || [];
+      return { venue: v, items, score: venueBusynessScore(items) };
+     })
+     .filter(x => x.items.length > 0)
+     .sort((a, b) => b.score - a.score);
 
-          <div class="mt-2 space-y-2 overflow-auto pr-1">
-            ${items.length ? items.map(renderBookingRow).join("") : `<div class="text-xs font-extrabold text-muted">No bookings</div>`}
-          </div>
+    venuesWithBookings.forEach(({ venue, items }) => {
+      wrap.innerHTML += renderVenueCard(venue, items);
+    });
+
+    // If literally nothing is booked, show a friendly message (instead of blank grid)
+    if (!venuesWithBookings.length){
+      wrap.innerHTML = `
+        <div class="bg-card border border-line rounded-2xl p-4 text-sm font-black text-muted">
+        No bookings today in this location.
         </div>
       `;
-    });
+    }
+
+
   }
+
+  function renderVenueCard(venue, items, isEmpty = false){
+    return `
+      <div class="bg-card border border-line rounded-2xl p-3 flex flex-col max-h-[520px]
+                  ${isEmpty ? "opacity-60 order-last" : ""}">
+        <div class="flex items-center justify-between gap-2">
+          <div class="font-black text-base">${escapeHtml(venue)}</div>
+          <div class="text-xs font-extrabold text-muted">
+            ${items.length} booking(s)
+          </div>
+        </div>
+
+        <div class="mt-2 space-y-2 overflow-auto pr-1 flex-1">
+          ${
+            items.length
+              ? items.map(renderBookingRow).join("")
+              : `<div class="text-xs font-extrabold text-muted italic">No bookings</div>`
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  function parseHM(t){
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t||"").trim());
+    if (!m) return null;
+    return { h: parseInt(m[1],10), m: parseInt(m[2],10) };
+  }
+
+  function durationMins(start, end){
+    const s = parseHM(start), e = parseHM(end);
+    if (!s || !e) return 0;
+    return Math.max(0, (e.h*60 + e.m) - (s.h*60 + s.m));
+  }
+
+/**
+ * Higher score = show earlier in grid.
+ * Weight both count + total minutes so a venue with fewer long bookings
+ * doesn't get buried under lots of short ones.
+ */
+  function venueBusynessScore(items){
+  const count = items.length;
+  const mins = items.reduce((sum, b) => sum + durationMins(b.start, b.end), 0);
+  return (count * 10000) + mins; // count dominates, minutes breaks ties
+  }
+
+  function renderVenueCard(venue, items){
+  return `
+    <div class="<div class="bg-card border border-line bg-[#06181f] rounded-2xl p-3">
+      <div class="flex items-center justify-between gap-2">
+        <div class="font-black text-base">${escapeHtml(venue)}</div>
+        <div class="text-xs font-extrabold text-muted">${items.length} booking(s)</div>
+      </div>
+
+      <div class="mt-2 space-y-2 pr-1">
+        ${items.map(renderBookingRow).join("")}
+      </div>
+    </div>
+  `;
+}
+
+
 
   function renderBookingRow(b){
     const srcPill = b.source === "perfectmind"
-      ? `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-plan text-white">PerfectMind</span>`
+      ? ``
       : `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-teal text-white">Manual</span>`;
 
     const deleteBtn = (b.source === "manual" && b.rowNumber)
