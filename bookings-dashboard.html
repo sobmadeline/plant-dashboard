@@ -339,44 +339,47 @@
   `;
 }
 
+function renderBookingRow(b){
+  const srcPill = b.source === "perfectmind"
+    ? `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-plan text-white">PerfectMind</span>`
+    : `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-teal text-white">Manual</span>`;
 
+  const deleteBtn = (b.source === "manual" && b.rowNumber)
+    ? `<button class="rounded-xl px-3 py-2 font-black text-white bg-bad"
+          type="button" onclick="deleteManual(${b.rowNumber})">Delete</button>`
+    : "";
 
-  function renderBookingRow(b){
-    const srcPill = b.source === "perfectmind"
-      ? ``
-      : `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-teal text-white">Manual</span>`;
+  const area = (b.area || "").trim();
+  const notes = (b.notes || "").trim();
+  const activity = (b.activity || "").trim();
 
-    const deleteBtn = (b.source === "manual" && b.rowNumber)
-      ? `<button class="rounded-xl px-3 py-2 font-black text-white bg-bad"
-            type="button" onclick="deleteManual(${b.rowNumber})">Delete</button>`
-      : "";
+  const showActivity =
+    activity &&
+    String(b.venue || "").toLowerCase().includes("multipurpose");
 
-    const area = (b.areaCombined || b.area || "").trim();
-    const notes = (b.notesCombined || b.notes || "").trim();
-
-
-    return `
-      <div class="border border-line rounded-2xl bg-[#06181f] p-2.5">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <div class="font-black text-[15px]">
-              ${escapeHtml(b.start)}–${escapeHtml(b.end)} • ${escapeHtml(b.name || "Booking")}
-            </div>
-
-            <div class="text-xs font-extrabold text-muted mt-1 leading-snug">
-              ${area ? `Area: ${escapeHtml(area)}${b.areasCount > 1 ? ` <span class="opacity-80">(${b.areasCount} areas)</span>` : ""}` : `&nbsp;`}
-              ${notes ? `<div class="mt-1">Notes: ${escapeHtml(notes)}</div>` : ""}
-            </div>
+  return `
+    <div class="border border-line rounded-2xl bg-[#06181f] p-3">
+      <div class="flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="font-black text-sm">
+            ${escapeHtml(b.start)}–${escapeHtml(b.end)} • ${escapeHtml(b.name || "Booking")}
           </div>
 
-          <div class="flex flex-col items-end gap-2 shrink-0">
-            ${srcPill}
-            ${deleteBtn}
+          <div class="text-xs font-extrabold text-muted mt-1 leading-snug">
+            ${area ? `Area: ${escapeHtml(area)}` : `&nbsp;`}
+            ${showActivity ? `<div class="mt-1">Activity: ${escapeHtml(activity)}</div>` : ""}
+            ${notes ? `<div class="mt-1">Notes: ${escapeHtml(notes)}</div>` : ""}
           </div>
         </div>
+
+        <div class="flex flex-col items-end gap-2 shrink-0">
+          ${srcPill}
+          ${deleteBtn}
+        </div>
       </div>
-    `;
-  }
+    </div>
+  `;
+}
 
   async function loadAll(showToast){
     try{
