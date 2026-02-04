@@ -211,7 +211,7 @@ function condenseSwimmingPoolDashboardOnly(items){
     let m = /^aqua\s*duck\s*(.*)$/i.exec(name);
     if (m){
       const label = (m[1] || "").trim(); // "1", "2", etc (or blank)
-      const key = `pool|${b.date}|${b.start}|${b.end}|aquduck`;
+      const key = `pool|${b.date}|aquduck`;
       addToGroup(key, b, "aquduck", label || null);
       continue;
     }
@@ -220,7 +220,7 @@ function condenseSwimmingPoolDashboardOnly(items){
     m = /^stage\s*(.*)$/i.exec(name);
     if (m){
       const label = (m[1] || "").trim(); // "2", "3A", "7/8", etc
-      const key = `pool|${b.date}|${b.start}|${b.end}|stage`;
+      const key = `pool|${b.date}|stage`;
       addToGroup(key, b, "stage", label || null);
       continue;
     }
