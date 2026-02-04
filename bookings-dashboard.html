@@ -291,8 +291,7 @@ function condenseSwimmingPoolDashboardOnly(items){
       .concat((manualBookings||[]).map(b => ({...b, source:"manual"})))
       .concat((pmBookings||[]).map(b => ({...b, source:"perfectmind"})));
 
-  let filtered = all
-  .  filter(b => String(b.date||"").trim() === dateStr)
+  let filtered = all.filter(b => String(b.date||"").trim() === dateStr)
     .filter(b => b.venue);
 
     // Dashboard-only condense pass:
@@ -449,24 +448,12 @@ function condenseSwimmingPoolDashboardOnly(items){
   return (count * 10000) + mins; // count dominates, minutes breaks ties
   }
 
-  function renderVenueCard(venue, items){
-  return `
-    <div class="<div class="bg-card border border-line bg-[#06181f] rounded-2xl p-3">
-      <div class="flex items-center justify-between gap-2">
-        <div class="font-black text-base">${escapeHtml(venue)}</div>
-        <div class="text-xs font-extrabold text-muted">${items.length} booking(s)</div>
-      </div>
-
-      <div class="mt-2 space-y-2 pr-1">
-        ${items.map(renderBookingRow).join("")}
-      </div>
-    </div>
-  `;
-}
+  
 
 function renderBookingRow(b){
-  const srcPill = b.source === "perfectmind"
-    : `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-teal text-white">Manual</span>`;
+  const srcPill = (b.source === "perfectmind")
+    ? `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-teal text-white">PerfectMind</span>`
+    : `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-pindan text-white">Manual</span>`;
 
   const deleteBtn = (b.source === "manual" && b.rowNumber)
     ? `<button class="rounded-xl px-3 py-2 font-black text-white bg-bad"
@@ -535,4 +522,3 @@ function renderBookingRow(b){
 </script>
 </body>
 </html>
-
