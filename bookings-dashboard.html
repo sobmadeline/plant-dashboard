@@ -263,12 +263,15 @@ function condenseSwimmingPoolDashboardOnly(items){
       .concat((manualBookings||[]).map(b => ({...b, source:"manual"})))
       .concat((pmBookings||[]).map(b => ({...b, source:"perfectmind"})));
 
-    return all
-      .filter(b => String(b.date||"").trim() === dateStr)
-      .filter(b => b.venue);
-      filtered = condenseSwimmingPoolDashboardOnly(filtered);
+  let filtered = all
+  .  filter(b => String(b.date||"").trim() === dateStr)
+    .filter(b => b.venue);
 
-      return filtered;
+    // Dashboard-only condense pass:
+    filtered = condenseSwimmingPoolDashboardOnly(filtered);
+
+  return filtered;
+
   }
 
   /**
