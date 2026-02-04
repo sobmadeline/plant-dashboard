@@ -30,7 +30,7 @@
   </script>
 </head>
 
-<body class="m-0 font-sans bg-bg text-slate-50 text-[15px] min-h-screen overflow-y-auto">
+<body class="m-0 font-sans bg-bg text-slate-50 text-[15px] min-h-screen overflow-hidden">
   <!-- Header -->
   <header class="bg-darkturq px-2 py-3.5 md:flex items-center justify-between gap-4">
   <!-- Left: logo + titles -->
@@ -168,27 +168,33 @@
 
    // Aqua Ducks and LTS Condenser
 function condenseSwimmingPoolDashboardOnly(items){
-  // Only condense Swimming Pool bookings; everything else unchanged
   const out = [];
   const pool = [];
   const rest = [];
 
+  const normTime = (t) => {
+    // turn "09:15", "09:15:00", "09:15 " into "09:15"
+    const s = String(t || "").trim();
+    const m = /^(\d{1,2}):(\d{2})/.exec(s);
+    if (!m) return s;
+    return `${String(m[1]).padStart(2,"0")}:${m[2]}`;
+  };
+
+  const clean = (s) => String(s || "").trim();
+
   (items || []).forEach(b => {
-    if (String(b.venue || "") === "Swimming Pool") pool.push(b);
+    if (clean(b.venue) === "Swimming Pool") pool.push(b);
     else rest.push(b);
   });
 
-  // Group key: venue + date + start + end + groupType
   const groups = new Map();
 
   function addToGroup(key, b, groupType, label){
     if (!groups.has(key)){
       groups.set(key, {
         ...b,
-        // dashboard-only meta
-        _grouped: true,
-        _groupType: groupType,      // "aquduck" | "stage"
-        _labels: new Set(),         // stage numbers or duck numbers
+        _groupType: groupType,   // "aquduck" | "lts"
+        _labels: new Set(),
         _areas: new Set(),
         _notes: new Set(),
       });
@@ -197,54 +203,58 @@ function condenseSwimmingPoolDashboardOnly(items){
 
     if (label) g._labels.add(label);
 
-    const area = String(b.area || "").trim();
+    const area = clean(b.area);
     if (area) g._areas.add(area);
 
-    const notes = String(b.notes || "").trim();
+    const notes = clean(b.notes);
     if (notes) g._notes.add(notes);
   }
 
   for (const b of pool){
-    const name = String(b.name || "").trim();
+    const name = clean(b.name).toLowerCase();
 
-    // Aqua Duck X
-    let m = /^aqua\s*duck\s*(.*)$/i.exec(name);
+    const start = normTime(b.start);
+    const end   = normTime(b.end);
+    const date  = clean(b.date);
+
+    // Match: Aqua Duck (6) / Aqua Duck 6 / Aqua Duck - 6
+    let m = /^aqua\s*duck\b[\s\-:]*\(?\s*([0-9]+)\s*\)?/i.exec(clean(b.name));
     if (m){
-      const label = (m[1] || "").trim(); // "1", "2", etc (or blank)
-      const key = `pool|${b.date}|aquduck`;
-      addToGroup(key, b, "aquduck", label || null);
+      const label = m[1];
+      const key = `pool|${date}|aquduck`;
+      addToGroup(key, {...b, start, end}, "aquduck", label);
       continue;
     }
 
-    // Stage X / Stage 3A / Stage 7/8
-    m = /^stage\s*(.*)$/i.exec(name);
+    // Match: Stage 3A / Stage 7/8 / Stage (2) etc
+    m = /^stage\b[\s\-:]*\(?\s*([0-9a-z\/]+)\s*\)?/i.exec(clean(b.name));
     if (m){
-      const label = (m[1] || "").trim(); // "2", "3A", "7/8", etc
-      const key = `pool|${b.date}|stage`;
-      addToGroup(key, b, "stage", label || null);
+      const label = m[1].toUpperCase();
+      const key = `pool|${date}|lts`;
+      addToGroup(key, {...b, start, end}, "lts", label);
       continue;
     }
 
-    // anything else in Swimming Pool stays as-is
-    out.push(b);
+    // Anything else stays the same
+    out.push({...b, start, end});
   }
 
-  // Convert groups back to booking cards
+  // turn groups into cards
   for (const g of groups.values()){
     const labels = Array.from(g._labels).filter(Boolean);
-    labels.sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric:true}));
 
-    // Build new display name (dashboard-only)
+    // Sort labels smart-ish: numeric first then alpha (good enough for 1,2,3A,3B,7/8)
+    labels.sort((a,b) => a.localeCompare(b, undefined, { numeric:true }));
+
     if (g._groupType === "aquduck"){
       g.name = labels.length ? `Aqua Duck (${labels.join(", ")})` : "Aqua Duck";
-    } else if (g._groupType === "stage"){
-      g.name = labels.length ? `Stages (${labels.join(", ")})` : "Stages";
+    } else if (g._groupType === "lts"){
+      g.name = labels.length ? `Learn to Swim (Stage ${labels.join(", ")})` : "Learn to Swim";
     }
 
-    // Combine areas + notes (dashboard-only)
     const areas = Array.from(g._areas);
     areas.sort((a,b) => a.localeCompare(b));
-    g.area = areas.join(" • "); // will show as one line
+    g.area = areas.join(" • ");
 
     const notes = Array.from(g._notes);
     notes.sort((a,b) => a.localeCompare(b));
@@ -253,7 +263,6 @@ function condenseSwimmingPoolDashboardOnly(items){
     out.push(g);
   }
 
-  // Add the other venues back
   return out.concat(rest);
 }
   
