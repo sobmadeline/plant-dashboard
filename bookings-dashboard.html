@@ -166,6 +166,97 @@
     return Array.from(new Set((arr || []).map(x => String(x||"").trim()).filter(Boolean)));
   }
 
+   // Aqua Ducks and LTS Condenser
+function condenseSwimmingPoolDashboardOnly(items){
+  // Only condense Swimming Pool bookings; everything else unchanged
+  const out = [];
+  const pool = [];
+  const rest = [];
+
+  (items || []).forEach(b => {
+    if (String(b.venue || "") === "Swimming Pool") pool.push(b);
+    else rest.push(b);
+  });
+
+  // Group key: venue + date + start + end + groupType
+  const groups = new Map();
+
+  function addToGroup(key, b, groupType, label){
+    if (!groups.has(key)){
+      groups.set(key, {
+        ...b,
+        // dashboard-only meta
+        _grouped: true,
+        _groupType: groupType,      // "aquduck" | "stage"
+        _labels: new Set(),         // stage numbers or duck numbers
+        _areas: new Set(),
+        _notes: new Set(),
+      });
+    }
+    const g = groups.get(key);
+
+    if (label) g._labels.add(label);
+
+    const area = String(b.area || "").trim();
+    if (area) g._areas.add(area);
+
+    const notes = String(b.notes || "").trim();
+    if (notes) g._notes.add(notes);
+  }
+
+  for (const b of pool){
+    const name = String(b.name || "").trim();
+
+    // Aqua Duck X
+    let m = /^aqua\s*duck\s*(.*)$/i.exec(name);
+    if (m){
+      const label = (m[1] || "").trim(); // "1", "2", etc (or blank)
+      const key = `pool|${b.date}|${b.start}|${b.end}|aquduck`;
+      addToGroup(key, b, "aquduck", label || null);
+      continue;
+    }
+
+    // Stage X / Stage 3A / Stage 7/8
+    m = /^stage\s*(.*)$/i.exec(name);
+    if (m){
+      const label = (m[1] || "").trim(); // "2", "3A", "7/8", etc
+      const key = `pool|${b.date}|${b.start}|${b.end}|stage`;
+      addToGroup(key, b, "stage", label || null);
+      continue;
+    }
+
+    // anything else in Swimming Pool stays as-is
+    out.push(b);
+  }
+
+  // Convert groups back to booking cards
+  for (const g of groups.values()){
+    const labels = Array.from(g._labels).filter(Boolean);
+    labels.sort((a,b) => String(a).localeCompare(String(b), undefined, {numeric:true}));
+
+    // Build new display name (dashboard-only)
+    if (g._groupType === "aquduck"){
+      g.name = labels.length ? `Aqua Duck (${labels.join(", ")})` : "Aqua Duck";
+    } else if (g._groupType === "stage"){
+      g.name = labels.length ? `Stages (${labels.join(", ")})` : "Stages";
+    }
+
+    // Combine areas + notes (dashboard-only)
+    const areas = Array.from(g._areas);
+    areas.sort((a,b) => a.localeCompare(b));
+    g.area = areas.join(" • "); // will show as one line
+
+    const notes = Array.from(g._notes);
+    notes.sort((a,b) => a.localeCompare(b));
+    g.notes = notes.join(" • ");
+
+    out.push(g);
+  }
+
+  // Add the other venues back
+  return out.concat(rest);
+}
+  
   // ====== MERGE + RENDER ======
   function mergedForDate(dateStr){
     const all = []
@@ -175,6 +266,9 @@
     return all
       .filter(b => String(b.date||"").trim() === dateStr)
       .filter(b => b.venue);
+      filtered = condenseSwimmingPoolDashboardOnly(filtered);
+
+      return filtered;
   }
 
   /**
