@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+  <link rel="icon" type="image/x-icon" href="./images/favicon.ico">
   <title>Bookings Dashboard - BRAC Tools</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -30,36 +30,40 @@
   </script>
   
   <style>
-  
-  /* Venue grid
-     - Desktop (>=901px): fit-to-screen scaling, no page scroll, no internal scrollbars.
-     - Mobile: normal flow + page scroll (readability wins). */
+
+  /* Venue layout
+     - Desktop (>=901px): 4-column masonry (packs into shortest column) + fit-to-screen scaling, no page scroll.
+     - Mobile: normal responsive grid + page scroll. */
+
   #venueStage{
     height: calc(100vh - 86px);
     overflow: hidden;
   }
 
+  /* Desktop: masonry via CSS columns (stable + good packing) */
   #venueWrap{
     --dashScale: 1;
     --gap: 14px;
     --pad: 14px;
 
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-    gap: var(--gap);
+    display: block;
     padding: var(--pad);
+
+    column-count: 4;
+    column-gap: var(--gap);
 
     transform: scale(var(--dashScale));
     transform-origin: top left;
     width: calc(100% / var(--dashScale));
   }
 
-  /* Cap columns on large displays so cards wrap into rows and avoid shrinking too small */
-  @media (min-width: 1400px){
-    #venueWrap{ grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  }
-  @media (min-width: 1900px){
-    #venueWrap{ grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .venueCard{
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    page-break-inside: avoid;
+    margin: 0 0 var(--gap) 0;
+    width: 100%;
+    display: inline-block; /* required for columns + avoid full-height stretch */
   }
 
   .bookingList{
@@ -67,30 +71,31 @@
     min-height: 0;
   }
 
-  /* Mobile/tablet: allow the page to scroll normally (no scaling) */
+  /* Slightly tighten booking rows to help fit more on-screen */
+  .bookingRow{ padding: 10px 12px !important; }
+  .bookingRow .title{ font-size: clamp(12px, 1.05vw, 14px); line-height: 1.15; }
+  .bookingRow .meta{ font-size: clamp(11px, 0.95vw, 12px); line-height: 1.2; }
+
+  /* Responsiveness */
+  @media (max-width: 1400px){ #venueWrap{ column-count: 3; } }
+  @media (max-width: 1100px){ #venueWrap{ column-count: 2; } }
+
+  /* Mobile/tablet: turn off scaling + columns; allow page scroll */
   @media (max-width: 900px){
     #venueStage{ height: auto; overflow: visible; }
-    #venueWrap{ transform: none; width: 100%; }
+    #venueWrap{
+      transform: none;
+      width: 100%;
+      column-count: initial;
+      column-gap: initial;
+
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: var(--gap);
+    }
+    .venueCard{ display: block; margin: 0; }
   }
 
-
-  /* Tighter booking rows to help fit more on-screen */
-  .bookingRow{
-    padding: 10px 12px !important;
-  }
-  .bookingRow .title{
-    font-size: clamp(12px, 1.05vw, 14px);
-    line-height: 1.15;
-  }
-  .bookingRow .meta{
-    font-size: clamp(11px, 0.95vw, 12px);
-    line-height: 1.2;
-  }
-
-  /* Responsive columns */
-  @media (max-width: 1400px){ #venueWrap{ grid-template-columns: repeat(3, minmax(0,1fr)); } }
-  @media (max-width: 1100px){ #venueWrap{ grid-template-columns: repeat(2, minmax(0,1fr)); height: calc(100vh - 120px);} }
-  @media (max-width: 800px){  #venueWrap{ grid-template-columns: repeat(1, minmax(0,1fr)); height: calc(100vh - 140px);} }
 </style>
 
 </head>
@@ -531,7 +536,7 @@ function condenseSwimmingPoolDashboardOnly(items){
     const neededW = wrap.scrollWidth;
     const neededH = wrap.scrollHeight;
 
-        const scaleW = 1; // width handled by responsive grid + column caps
+    const scaleW = availW > 0 ? (availW / neededW) : 1;
     const scaleH = availH > 0 ? (availH / neededH) : 1;
 
     // Never scale up, only down. Keep a readability floor.
