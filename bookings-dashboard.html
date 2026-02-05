@@ -171,7 +171,35 @@
     return (parseInt(m[1],10)*60) + parseInt(m[2],10);
   }
 
-  function getSelectedDate(){
+  
+  function normalizeDate(s){
+    // Normalise to ISO YYYY-MM-DD so we can compare dates reliably
+    const str = String(s ?? "").trim();
+    if (!str) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+
+    // dd/mm/yyyy or d/m/yyyy (AU style)
+    let m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(str);
+    if (m){
+      const dd = m[1].padStart(2,"0");
+      const mm = m[2].padStart(2,"0");
+      const yyyy = m[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    // dd-mm-yyyy
+    m = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(str);
+    if (m){
+      const dd = m[1].padStart(2,"0");
+      const mm = m[2].padStart(2,"0");
+      const yyyy = m[3];
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    return str; // fallback (won't match unless both sides identical)
+  }
+
+function getSelectedDate(){
     const el = document.getElementById("datePick");
     return el.value;
   }
@@ -325,8 +353,11 @@ function condenseSwimmingPoolDashboardOnly(items){
       .concat((manualBookings||[]).map(b => ({...b, source:"manual"})))
       .concat((pmBookings||[]).map(b => ({...b, source:"perfectmind"})));
 
-  let filtered = all.filter(b => String(b.date||"").trim() === dateStr)
-    .filter(b => b.venue);
+  const target = normalizeDate(dateStr);
+
+    let filtered = all
+      .filter(b => normalizeDate(b.date) === target)
+      .filter(b => b.venue);
 
     // Dashboard-only condense pass:
     filtered = condenseSwimmingPoolDashboardOnly(filtered);
