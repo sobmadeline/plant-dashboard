@@ -30,35 +30,41 @@
   </script>
   
   <style>
-  /* Responsive grid for venue cards (no internal scrollbars; optional auto-fit scaling) */
+  
+  /* Venue grid
+     - Desktop (>=901px): fit-to-screen scaling, no page scroll, no internal scrollbars.
+     - Mobile: normal flow + page scroll (readability wins). */
+  #venueStage{
+    height: calc(100vh - 86px);
+    overflow: hidden;
+  }
+
   #venueWrap{
     --dashScale: 1;
-    --cardH: 285px;           /* JS will tweak scale to fit screen */
     --gap: 14px;
     --pad: 14px;
 
-    display:grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
     gap: var(--gap);
     padding: var(--pad);
-
-    height: calc(100vh - 86px); /* header height */
-    overflow: hidden;
 
     transform: scale(var(--dashScale));
     transform-origin: top left;
     width: calc(100% / var(--dashScale));
   }
 
-  /* Make each card a predictable height so we can scale the whole grid to fit */
-  .venueCard{
-    height: var(--cardH);
-    min-height: 0;
-  }
   .bookingList{
-    overflow: hidden;           /* no scrollbars */
+    overflow: hidden; /* no scrollbars inside cards */
     min-height: 0;
   }
+
+  /* Mobile/tablet: allow the page to scroll normally (no scaling) */
+  @media (max-width: 900px){
+    #venueStage{ height: auto; overflow: visible; }
+    #venueWrap{ transform: none; width: 100%; }
+  }
+
 
   /* Tighter booking rows to help fit more on-screen */
   .bookingRow{
@@ -113,7 +119,7 @@
   </header>
 
 
-  <div id="venueWrap"></div>
+  <main id="venueStage"><div id="venueWrap"></div></main>
 
   <!-- Toast -->
   <div id="toast" style="display:none"
@@ -456,58 +462,50 @@ function condenseSwimmingPoolDashboardOnly(items){
       </div>
     `;
   }
+  
   function fitToScreen(){
-    const wrap = document.getElementById("venueWrap");
-    if (!wrap) return;
+    const stage = document.getElementById("venueStage");
+    const wrap  = document.getElementById("venueWrap");
+    if (!stage || !wrap) return;
 
-    // Always measure at scale=1, then apply a scale that fits BOTH width and height.
+    // Always measure at scale=1, then apply a scale that fits the whole grid.
     wrap.style.setProperty("--dashScale", "1");
 
-    const cards = Array.from(wrap.children).filter(el => el.classList && el.classList.contains("venueCard"));
-    const count = cards.length;
-    if (!count) return;
+    const isMobile = window.matchMedia("(max-width: 900px)").matches;
+    if (isMobile){
+      // Mobile: readability > fit-to-screen. Allow page scroll.
+      document.body.style.overflow = "auto";
+      return;
+    }
 
-    const cs = getComputedStyle(wrap);
-    const gap = parseFloat(cs.gap || cs.rowGap || "14") || 14;
-    const padTop = parseFloat(cs.paddingTop || "14") || 14;
-    const padBottom = parseFloat(cs.paddingBottom || "14") || 14;
-    const padLeft = parseFloat(cs.paddingLeft || "14") || 14;
-    const padRight = parseFloat(cs.paddingRight || "14") || 14;
+    // Desktop: input-free display mode (no page scroll; scale grid to fit).
+    document.body.style.overflow = "hidden";
 
-    // Determine current column count from computed tracks
-    const tracks = (cs.gridTemplateColumns || "").split(" ").filter(Boolean);
-    const cols = Math.max(1, tracks.length);
-    const rows = Math.max(1, Math.ceil(count / cols));
+    const header = document.querySelector("header");
+    const headerH = header ? header.offsetHeight : 86;
+    stage.style.height = `calc(100vh - ${headerH}px)`;
 
-    // Prefer to "fill" the available height by adjusting card height first (reduces empty space),
-    // then only scale down if we still overflow.
-    const availH = wrap.clientHeight || (window.innerHeight - 86);
-    const availW = wrap.clientWidth || window.innerWidth;
+    // Force reflow after height update
+    const availW = stage.clientWidth || window.innerWidth;
+    const availH = stage.clientHeight || (window.innerHeight - headerH);
 
-    const usableH = Math.max(0, availH - padTop - padBottom - (rows - 1) * gap);
-    const idealCardH = usableH / rows;
+    const neededW = wrap.scrollWidth;
+    const neededH = wrap.scrollHeight;
 
-    const minCardH = 170;
-    const maxCardH = 360;
-    const cardH = Math.max(minCardH, Math.min(maxCardH, idealCardH));
-    wrap.style.setProperty("--cardH", `${Math.round(cardH)}px`);
+    const scaleW = availW > 0 ? (availW / neededW) : 1;
+    const scaleH = availH > 0 ? (availH / neededH) : 1;
 
-    // After setting card height, measure actual needed size
-    // (scrollWidth/Height reflect the unscaled content size)
-    const neededW = wrap.scrollWidth + padLeft + padRight;
-    const neededH = wrap.scrollHeight + padTop + padBottom;
-
-    const scaleW = availW > 0 ? Math.min(1, availW / neededW) : 1;
-    const scaleH = availH > 0 ? Math.min(1, availH / neededH) : 1;
-
-    // Don't shrink beyond readability floor
-    const floor = window.innerWidth <= 520 ? 0.72 : 0.65;
-    const scale = Math.max(floor, Math.min(scaleW, scaleH));
+    // Never scale up, only down. Keep a readability floor.
+    const floor = 0.58;
+    const scale = Math.max(floor, Math.min(1, scaleW, scaleH));
 
     wrap.style.setProperty("--dashScale", String(scale.toFixed(3)));
-  }window.addEventListener("resize", () => {
-    // slight delay so media queries settle first
+  }
+
+  window.addEventListener("resize", () => {
     window.requestAnimationFrame(() => fitToScreen());
+  });
+
   });
 
 
