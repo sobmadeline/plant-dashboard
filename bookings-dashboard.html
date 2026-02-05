@@ -30,40 +30,43 @@
   </script>
   
   <style>
-
   /* Venue layout
-     - Desktop (>=901px): 4-column masonry (packs into shortest column) + fit-to-screen scaling, no page scroll.
-     - Mobile: normal responsive grid + page scroll. */
+     - Desktop (>=901px): TRUE masonry (packs into shortest column via JS) with 4 columns on 1920, and fit-to-screen scaling, no page scroll.
+     - Mobile: normal flow + page scroll. */
 
   #venueStage{
     height: calc(100vh - 86px);
     overflow: hidden;
   }
 
-  /* Desktop: masonry via CSS columns (stable + good packing) */
   #venueWrap{
     --dashScale: 1;
     --gap: 14px;
     --pad: 14px;
 
-    display: block;
     padding: var(--pad);
-
-    column-count: 4;
-    column-gap: var(--gap);
 
     transform: scale(var(--dashScale));
     transform-origin: top left;
     width: calc(100% / var(--dashScale));
   }
 
+  /* Desktop: masonry columns container */
+  .masonry{
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--gap);
+    align-items: start;
+  }
+  .mcol{
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap);
+    min-width: 0;
+  }
+
   .venueCard{
-    break-inside: avoid;
-    -webkit-column-break-inside: avoid;
-    page-break-inside: avoid;
-    margin: 0 0 var(--gap) 0;
     width: 100%;
-    display: inline-block; /* required for columns + avoid full-height stretch */
   }
 
   .bookingList{
@@ -76,26 +79,22 @@
   .bookingRow .title{ font-size: clamp(12px, 1.05vw, 14px); line-height: 1.15; }
   .bookingRow .meta{ font-size: clamp(11px, 0.95vw, 12px); line-height: 1.2; }
 
-  /* Responsiveness */
-  @media (max-width: 1400px){ #venueWrap{ column-count: 3; } }
-  @media (max-width: 1100px){ #venueWrap{ column-count: 2; } }
+  /* Responsiveness (still masonry, fewer columns) */
+  @media (max-width: 1500px){ .masonry{ grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 1200px){ .masonry{ grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-  /* Mobile/tablet: turn off scaling + columns; allow page scroll */
+  /* Mobile/tablet: turn off scaling; allow page scroll; single column normal flow */
   @media (max-width: 900px){
+    body{ overflow: auto !important; }
     #venueStage{ height: auto; overflow: visible; }
     #venueWrap{
       transform: none;
       width: 100%;
-      column-count: initial;
-      column-gap: initial;
-
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: var(--gap);
     }
-    .venueCard{ display: block; margin: 0; }
+    .masonry{
+      grid-template-columns: 1fr;
+    }
   }
-
 </style>
 
 </head>
@@ -132,7 +131,7 @@
   </header>
 
 
-  <main id="venueStage"><div id="venueWrap"></div></main>
+  <main id="venueStage"><div id="venueWrap" class="masonry"></div></main>
 
   <!-- Toast -->
   <div id="toast" style="display:none"
@@ -427,7 +426,60 @@ function condenseSwimmingPoolDashboardOnly(items){
     });
   }
 
-  function render(){
+  
+  // ====== TRUE MASONRY (balanced columns on desktop) ======
+  function buildMasonry(cardElements){
+    const wrap = document.getElementById("venueWrap");
+    if (!wrap) return;
+
+    // Mobile: just append in order (scroll allowed)
+    const isMobile = window.matchMedia("(max-width: 900px)").matches;
+    if (isMobile){
+      wrap.classList.add("masonry");
+      wrap.innerHTML = "";
+      for (const el of cardElements) wrap.appendChild(el);
+      return;
+    }
+
+    // Desktop/tablet: create N columns based on current CSS grid-template-columns
+    // We'll infer column count from computed style to match media queries.
+    wrap.innerHTML = "";
+
+    const computed = window.getComputedStyle(wrap);
+    const tpl = computed.gridTemplateColumns || "";
+    let colCount = 4;
+    if (tpl){
+      // gridTemplateColumns like "310px 310px 310px 310px" or "repeat(4, ...)" resolved to lengths
+      colCount = tpl.split(" ").filter(Boolean).length;
+      if (!colCount || colCount < 1) colCount = 4;
+    }
+
+    const cols = [];
+    for (let i=0;i<colCount;i++){
+      const col = document.createElement("div");
+      col.className = "mcol";
+      wrap.appendChild(col);
+      cols.push(col);
+    }
+
+    // Append items one by one into the currently shortest column.
+    // Use offsetHeight as we go (fast enough for this size).
+    for (const card of cardElements){
+      let best = cols[0];
+      for (const c of cols){
+        if (c.offsetHeight < best.offsetHeight) best = c;
+      }
+      best.appendChild(card);
+    }
+  }
+
+  function htmlToElement(htmlStr){
+    const tmp = document.createElement("div");
+    tmp.innerHTML = htmlStr.trim();
+    return tmp.firstElementChild;
+  }
+
+function render(){
     const dateStr = getSelectedDate();
     const allRaw = mergedForDate(dateStr);
     const all = condenseBookings(allRaw);
@@ -454,34 +506,36 @@ function condenseSwimmingPoolDashboardOnly(items){
       (lastPerfectMindFile ? ` • Latest CSV: ${lastPerfectMindFile}` : "");
 
     // render venue cards (hide empty) + sort by busyness
+    
     const wrap = document.getElementById("venueWrap");
-    wrap.innerHTML = "";
 
     const venuesWithBookings = VENUES
       .map(v => {
-      const items = byVenue[v] || [];
-      return { venue: v, items, score: venueBusynessScore(items) };
-     })
-     .filter(x => x.items.length > 0)
-     .sort((a, b) => b.score - a.score);
+        const items = byVenue[v] || [];
+        return { venue: v, items, score: venueBusynessScore(items) };
+      })
+      .filter(x => x.items.length > 0)
+      .sort((a, b) => b.score - a.score);
 
-    venuesWithBookings.forEach(({ venue, items }) => {
-      wrap.innerHTML += renderVenueCard(venue, items);
-    });
-
-    // If literally nothing is booked, show a friendly message (instead of blank grid)
     if (!venuesWithBookings.length){
+      // Friendly message (instead of blank grid)
       wrap.innerHTML = `
         <div class="bg-card border border-line rounded-2xl p-4 text-sm font-black text-muted">
-        No bookings today in this location.
+          No bookings today in this location.
         </div>
       `;
+      fitToScreen();
+      return;
     }
 
-    // Fit grid to screen (avoid scrollbars)
+    // Build cards as elements (so we can masonry-pack them)
+    const cards = venuesWithBookings.map(({ venue, items }) => htmlToElement(renderVenueCard(venue, items)));
+
+    // Masonry-pack into shortest columns (desktop) or normal flow (mobile)
+    buildMasonry(cards);
+
+    // Fit grid to screen (avoid scrollbars on 1920x1080)
     fitToScreen();
-
-
 
   }
 
