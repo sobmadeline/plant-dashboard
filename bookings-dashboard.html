@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="icon" type="image/x-icon" href="./images/favicon.ico">
+  <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
   <title>Bookings Dashboard - BRAC Tools</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -45,13 +45,21 @@
     --pad: 14px;
 
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-    gap: var(--gap);
+    grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr));
+gap: var(--gap);
     padding: var(--pad);
 
     transform: scale(var(--dashScale));
     transform-origin: top left;
     width: calc(100% / var(--dashScale));
+
+  @media (max-width: 900px){
+    #venueWrap{
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      width: 100%;
+      transform: none;
+    }
+  }
   }
 
   .bookingList{
@@ -506,11 +514,22 @@ function condenseSwimmingPoolDashboardOnly(items){
     if (isMobile){
       // Mobile: readability > fit-to-screen. Allow page scroll.
       document.body.style.overflow = "auto";
+      wrap.style.removeProperty("--cols");
       return;
     }
 
     // Desktop: input-free display mode (no page scroll; scale grid to fit).
     document.body.style.overflow = "hidden";
+
+    const header = document.querySelector("header");
+
+    // Choose a column count that encourages wrapping (to avoid tiny scale-down just to fit many columns).
+    // Cap columns on big screens so the layout uses multiple rows and fills vertical space better.
+    const maxCols = 5;
+    const minCard = 320; // px (rough target width per venue card)
+    const stageWForCols = stage.clientWidth || window.innerWidth;
+    const cols = Math.max(1, Math.min(maxCols, Math.floor(stageWForCols / minCard)));
+    wrap.style.setProperty("--cols", String(cols));
 
     const header = document.querySelector("header");
     const headerH = header ? header.offsetHeight : 86;
@@ -536,6 +555,7 @@ function condenseSwimmingPoolDashboardOnly(items){
   window.addEventListener("resize", () => {
     window.requestAnimationFrame(() => fitToScreen());
   });
+
 
 
   function parseHM(t){
