@@ -183,6 +183,14 @@
     return str.split("@")[0].trim();
   }
 
+  function cleanArea(s){
+    const str = String(s || "").trim();
+    if (!str) return "";
+    // Keep only the part before " - " (PerfectMind suffixes)
+    return str.split(" - ")[0].trim();
+  }
+
+  
   function toMin(t){
     // HH:MM -> minutes
     const m = /^(\d{1,2}):(\d{2})$/.exec(String(t||"").trim());
