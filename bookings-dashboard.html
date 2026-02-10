@@ -761,12 +761,18 @@ const statusClass = status === "past" ? "is-past" : (status === "ongoing" ? "is-
   (function boot(){
     const d = new Date();
     const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,"0");
-    const dd = String(d.getDate()).padStart(2,"0");
-    document.getElementById("datePick").value = `${yyyy}-${mm}-${dd}`;
+   const mm = String(d.getMonth()+1).padStart(2,"0");
+   const dd = String(d.getDate()).padStart(2,"0");
+   document.getElementById("datePick").value = `${yyyy}-${mm}-${dd}`;
 
-    loadAll(true);
-  })();
+   loadAll(true);
+
+   // Auto refresh every 10 seconds (silent)
+   setInterval(() => {
+     loadAll(false);
+   }, 10000);
+})()
+
 </script>
 </body>
 </html>
