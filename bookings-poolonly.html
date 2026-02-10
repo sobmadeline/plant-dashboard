@@ -40,7 +40,8 @@
       display: inline-block;
       width: 100%;
     }
-  </style>
+    .booking-row{ margin-bottom: 0.75rem; }
+</style>
 </head>
 
 <body class="m-0 font-sans bg-bg text-slate-50 text-[15px] min-h-screen overflow-y-auto">
@@ -83,8 +84,7 @@
       - height is set to fill the viewport minus header+padding; tune the 140px number if needed.
     -->
     <div
-      id="venueWrap"
-      class="columns-1 md:columns-2 xl:columns-4 [column-gap:0.75rem] [column-fill:auto] h-[calc(100vh-140px)]"
+      id="venueWrap" class="max-w-[1920px] mx-auto"
     ></div>
   </div>
 
@@ -285,13 +285,13 @@
 
     function renderVenueCard(venue, items) {
       return `
-        <div class="no-break bg-card border border-line rounded-2xl p-3 flex flex-col">
+        <div class="bg-card border border-line rounded-2xl p-3">
           <div class="flex items-center justify-between gap-2">
             <div class="font-black text-base">${escapeHtml(venue)}</div>
             <div class="text-xs font-extrabold text-muted">${items.length} booking(s)</div>
           </div>
 
-          <div class="mt-2 space-y-2 overflow-auto pr-1 flex-1 max-h-[calc(100vh-220px)]">
+          <div class="mt-2 [column-gap:0.75rem] [column-fill:auto] columns-1 md:columns-2 xl:columns-4 h-[calc(100vh-220px)]">
             ${items.length ? items.map(renderBookingRow).join("") : `<div class="text-xs font-extrabold text-muted italic">No bookings</div>`}
           </div>
         </div>
@@ -329,7 +329,7 @@
       const notes = (b.notesCombined || b.notes || "").trim();
 
       return `
-        <div class="no-break border border-line rounded-2xl bg-[#06181f] p-2.5">
+        <div class="no-break booking-row border border-line rounded-2xl bg-[#06181f] p-2.5">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <div class="font-black text-[15px]">
