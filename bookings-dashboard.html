@@ -183,6 +183,26 @@
     return str.split("@")[0].trim();
   }
 
+  
+  // Remove trailing descriptors like " - Club / Organisation" from area labels
+  function cleanArea(s){
+    const str = String(s || "").trim();
+    if (!str) return "";
+
+    // Split on common separators used by the dashboard and PerfectMind
+    const parts = str.split(/,|•/).map(p => p.trim()).filter(Boolean);
+
+    const cleaned = parts.map(p => {
+      // Remove anything after " - " or " – " (en dash) if present
+      const cut = p.split(/\s[-–]\s/)[0].trim();
+      // If there's still a trailing dash descriptor without spaces, remove it too
+      return cut.replace(/\s*[-–]\s*.+$/,"").trim();
+    });
+
+    // Re-join with comma+space (consistent, readable)
+    return cleaned.join(", ");
+  }
+
   function toMin(t){
     // HH:MM -> minutes
     const m = /^(\d{1,2}):(\d{2})$/.exec(String(t||"").trim());
@@ -330,7 +350,7 @@ function condenseSwimmingPoolDashboardOnly(items){
       g.end = end;
     }
 
-    const area = clean(b.area);
+    const area = cleanArea(clean(b.area));
     if (area) g._areas.add(area);
 
     const notes = clean(b.notes);
@@ -446,7 +466,7 @@ function condenseCrecheBookings(items){
 
     const g = groups.get(key);
 
-    const area = clean(b.area);
+    const area = cleanArea(clean(b.area));
     if (area) g._areas.add(area);
 
     const notes = cleanNotes(clean(b.notes));
@@ -532,7 +552,7 @@ function condenseCrecheBookings(items){
       }
 
       const g = map.get(key);
-      if (b.area) g.areas.push(b.area);
+      if (b.area) g.areas.push(cleanArea(b.area));
       if (b.notes) g.notesList.push(cleanNotes(b.notes));
 
       // keep rowNumbers for manual deletes if needed later
@@ -771,7 +791,7 @@ function renderBookingRow(b){
           type="button" onclick="deleteManual(${b.rowNumber})">Delete</button>`
     : "";
 
-  const area = (b.areaCombined || b.area || "").trim();
+  const area = cleanArea(b.areaCombined || b.area || "");
   const notes = cleanNotes(b.notesCombined || b.notes || "");
   const activity = (b.activity || "").trim();
 
@@ -813,7 +833,7 @@ const statusClass = status === "past" ? "is-past" : (status === "ongoing" ? "is-
     : (status === "past"
       ? `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-slate-700 text-white">Done</span>`
       : (soon
-        ? `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-warn text-white">Starting Soon</span>`
+        ? `<span class="rounded-full px-2.5 py-1 text-[11px] font-black bg-warn text-white">Starting soon</span>`
         : ""));
 
 
