@@ -274,7 +274,7 @@ function condenseSwimmingPoolDashboardOnly(items){
   };
 
   const timeToMin = (t) => {
-    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t||\"\").trim());
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t||"").trim());
     if (!m) return null;
     return (parseInt(m[1],10)*60) + parseInt(m[2],10);
   };
