@@ -41,6 +41,21 @@
       width: 100%;
     }
     .booking-row{ margin-bottom: 0.75rem; }
+
+    /* Booking status styling */
+    .bookingRow.is-past { opacity: 0.38; filter: grayscale(35%); }
+    .bookingRow.is-ongoing { border-color: #22c55e !important; } /* green outline */
+    .status-pill {
+      border-radius: 9999px;
+      padding: 2px 10px;
+      font-size: 11px;
+      font-weight: 900;
+      line-height: 1.2;
+      display: inline-block;
+    }
+    .status-pill.now { background: #16a34a; color: #ffffff; }
+    .status-pill.soon { background: #f59e0b; color: #0b1220; }
+    .status-pill.done { background: #334155; color: #ffffff; }
 </style>
 </head>
 
@@ -121,7 +136,34 @@
         '"': "&quot;",
         "'": "&#39;",
       }[c]));
+    
+    function normalizeDate(s){
+      // Normalise to ISO YYYY-MM-DD so we can compare dates reliably
+      const str = String(s ?? "").trim();
+      if (!str) return "";
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+
+      // dd/mm/yyyy or d/m/yyyy (AU style)
+      let m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(str);
+      if (m){
+        const dd = m[1].padStart(2,"0");
+        const mm = m[2].padStart(2,"0");
+        const yyyy = m[3];
+        return `${yyyy}-${mm}-${dd}`;
+      }
+
+      // dd-mm-yyyy
+      m = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(str);
+      if (m){
+        const dd = m[1].padStart(2,"0");
+        const mm = m[2].padStart(2,"0");
+        const yyyy = m[3];
+        return `${yyyy}-${mm}-${dd}`;
+      }
+
+      return str;
     }
+}
 
     function toMin(t) {
       // HH:MM -> minutes
@@ -178,15 +220,136 @@
       return Array.from(new Set((arr || []).map((x) => String(x || "").trim()).filter(Boolean)));
     }
 
-    // ====== MERGE + RENDER ======
+    
+    // ====== SWIMMING POOL (dashboard-style) CONDENSE ======
+    // Groups Aqua Duck and Learn to Swim stages into single cards per day (ignores time differences).
+    function condenseSwimmingPoolDashboardOnly(items) {
+      const out = [];
+      const rest = [];
+      const groups = new Map();
+
+      const clean = (s) => String(s || "").trim();
+
+      const normTime = (t) => {
+        const s = String(t || "").trim();
+        const m = /^(\d{1,2}):(\d{2})/.exec(s);
+        if (!m) return s;
+        return `${String(m[1]).padStart(2, "0")}:${m[2]}`;
+      };
+
+      const timeToMin = (t) => {
+        const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || "").trim());
+        if (!m) return null;
+        return (parseInt(m[1], 10) * 60) + parseInt(m[2], 10);
+      };
+
+      function addToGroup(key, b, groupType, label) {
+        const start = normTime(b.start);
+        const end = normTime(b.end);
+        const sMin = timeToMin(start);
+        const eMin = timeToMin(end);
+
+        if (!groups.has(key)) {
+          groups.set(key, {
+            ...b,
+            start,
+            end,
+            _groupType: groupType, // "aquduck" | "lts"
+            _labels: new Set(),
+            _areas: new Set(),
+            _notes: new Set(),
+            _minStart: sMin,
+            _maxEnd: eMin,
+          });
+        }
+
+        const g = groups.get(key);
+        if (label) g._labels.add(label);
+
+        // Keep earliest start / latest end
+        if (sMin !== null && (g._minStart == null || sMin < g._minStart)) {
+          g._minStart = sMin;
+          g.start = start;
+        }
+        if (eMin !== null && (g._maxEnd == null || eMin > g._maxEnd)) {
+          g._maxEnd = eMin;
+          g.end = end;
+        }
+
+        const area = clean(b.area);
+        if (area) g._areas.add(area);
+
+        const notes = clean(b.notes);
+        if (notes) g._notes.add(notes);
+      }
+
+      for (const b of (items || [])) {
+        const venue = clean(b.venue).toLowerCase();
+        const name = clean(b.name);
+        const nameLower = name.toLowerCase();
+
+        if (!venue.includes("swimming")) {
+          rest.push(b);
+          continue;
+        }
+
+        // Aqua Duck (e.g. "Aqua Duck (1, 2, 3, 6)")
+        if (nameLower.includes("aqua duck")) {
+          const labelMatch = name.match(/\(([^\)]+)\)/);
+          const label = labelMatch ? labelMatch[1].trim() : "";
+          const key = `pool|${clean(b.date)}|aquduck`;
+          addToGroup(key, b, "aquduck", label);
+          continue;
+        }
+
+        // Stages (Stage 1, Stage 3A, Stage 13/14)
+        const stageMatch = name.match(/^Stage\s*([0-9]+(?:\/[0-9]+)?[A-Za-z]?)\b/i);
+        if (stageMatch) {
+          const label = stageMatch[1].toUpperCase();
+          const key = `pool|${clean(b.date)}|lts`;
+          addToGroup(key, b, "lts", label);
+          continue;
+        }
+
+        out.push(b);
+      }
+
+      for (const g of groups.values()) {
+        const labels = Array.from(g._labels).filter(Boolean);
+        labels.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+        if (g._groupType === "aquduck") {
+          g.name = labels.length ? `Aqua Duck (${labels.join(", ")})` : "Aqua Duck";
+        } else if (g._groupType === "lts") {
+          g.name = labels.length ? `Learn to Swim (Stage ${labels.join(", ")})` : "Learn to Swim";
+        }
+
+        const areas = Array.from(g._areas);
+        areas.sort((a, b) => a.localeCompare(b));
+        g.area = areas.join(" • ");
+
+        const notes = Array.from(g._notes);
+        notes.sort((a, b) => a.localeCompare(b));
+        g.notes = notes.join(" • ");
+
+        out.push(g);
+      }
+
+      return out.concat(rest);
+    }
+
+// ====== MERGE + RENDER ======
     function mergedForDate(dateStr) {
       const all = []
         .concat((manualBookings || []).map((b) => ({ ...b, source: "manual" })))
         .concat((pmBookings || []).map((b) => ({ ...b, source: "perfectmind" })));
 
-      return all
+      let filtered = all
         .filter((b) => String(b.date || "").trim() === dateStr)
         .filter((b) => b.venue);
+
+      filtered = condenseSwimmingPoolDashboardOnly(filtered);
+      return filtered;
     }
 
     /**
@@ -339,8 +502,43 @@
       const area = (b.areaCombined || b.area || "").trim();
       const notes = (b.notesCombined || b.notes || "").trim();
 
+      // Status styling (only meaningful for today)
+      const today = new Date();
+      const todayISO = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+      const selectedISO = normalizeDate(getSelectedDate());
+      const nowMin = (today.getHours() * 60) + today.getMinutes();
+
+      const sMin = toMin(b.start);
+      const eMin = toMin(b.end);
+
+      let status = "upcoming";
+      let soon = false;
+
+      if (selectedISO && selectedISO < todayISO) {
+        status = "past";
+      } else if (selectedISO && selectedISO > todayISO) {
+        status = "upcoming";
+      } else if (selectedISO === todayISO && Number.isFinite(sMin) && Number.isFinite(eMin)) {
+        if (nowMin > eMin) {
+          status = "past";
+        } else if (nowMin >= sMin && nowMin <= eMin) {
+          status = "ongoing";
+        } else {
+          status = "upcoming";
+          const minsToStart = sMin - nowMin;
+          if (minsToStart > 0 && minsToStart <= 30) soon = true;
+        }
+      }
+
+      const statusClass = status === "past" ? "is-past" : (status === "ongoing" ? "is-ongoing" : "");
+      const statusPill = status === "ongoing"
+        ? `<span class="status-pill now">Now</span>`
+        : (status === "past"
+          ? `<span class="status-pill done">Done</span>`
+          : (soon ? `<span class="status-pill soon">Starting soon</span>` : ""));
+
       return `
-        <div class="no-break booking-row border border-line rounded-2xl bg-[#06181f] p-2.5">
+        <div class="no-break booking-row bookingRow border border-line rounded-2xl bg-[#06181f] p-2.5 ${statusClass}">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <div class="font-black text-[15px]">
@@ -354,6 +552,7 @@
             </div>
 
             <div class="flex flex-col items-end gap-2 shrink-0">
+              ${statusPill}
               ${srcPill}
               ${deleteBtn}
             </div>
