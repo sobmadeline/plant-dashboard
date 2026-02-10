@@ -273,6 +273,12 @@ function condenseSwimmingPoolDashboardOnly(items){
     return `${String(m[1]).padStart(2,"0")}:${m[2]}`;
   };
 
+  const timeToMin = (t) => {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t||\"\").trim());
+    if (!m) return null;
+    return (parseInt(m[1],10)*60) + parseInt(m[2],10);
+  };
+
   const clean = (s) => String(s || "").trim();
 
   (items || []).forEach(b => {
@@ -284,13 +290,40 @@ function condenseSwimmingPoolDashboardOnly(items){
 
   function addToGroup(key, b, groupType, label){
     if (!groups.has(key)){
+      const sMin = timeToMin(b.start);
+      const eMin = timeToMin(b.end);
       groups.set(key, {
         ...b,
         _groupType: groupType,   // "aquduck" | "lts"
         _labels: new Set(),
         _areas: new Set(),
         _notes: new Set(),
+        _minStart: sMin,
+        _maxEnd: eMin,
       });
+    }
+    const g = groups.get(key);
+
+    if (label) g._labels.add(label);
+
+    // Keep the earliest start and latest end across the group
+    const sMin = timeToMin(b.start);
+    const eMin = timeToMin(b.end);
+    if (sMin !== null && (g._minStart === null || g._minStart === undefined || sMin < g._minStart)){
+      g._minStart = sMin;
+      g.start = b.start;
+    }
+    if (eMin !== null && (g._maxEnd === null || g._maxEnd === undefined || eMin > g._maxEnd)){
+      g._maxEnd = eMin;
+      g.end = b.end;
+    }
+
+    const area = clean(b.area);
+    if (area) g._areas.add(area);
+
+    const notes = clean(b.notes);
+    if (notes) g._notes.add(notes);
+  });
     }
     const g = groups.get(key);
 
@@ -641,8 +674,8 @@ function renderBookingRow(b){
           type="button" onclick="deleteManual(${b.rowNumber})">Delete</button>`
     : "";
 
-  const area = (b.area || "").trim();
-  const notes = (b.notes || "").trim();
+  const area = (b.areaCombined || b.area || "").trim();
+  const notes = (b.notesCombined || b.notes || "").trim();
   const activity = (b.activity || "").trim();
 
   const showActivity =
