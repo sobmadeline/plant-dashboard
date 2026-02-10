@@ -860,20 +860,39 @@ const statusClass = status === "past" ? "is-past" : (status === "ongoing" ? "is-
     }
   }
 
-  // ====== BOOT ======
-  (function boot(){
+  
+  function setDateToToday(){
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth()+1).padStart(2,"0");
     const dd = String(d.getDate()).padStart(2,"0");
     document.getElementById("datePick").value = `${yyyy}-${mm}-${dd}`;
+  }
+
+  function scheduleMidnightRollover(){
+    const now = new Date();
+    const next = new Date(now);
+    next.setHours(24,0,0,0); // next midnight
+    const ms = next.getTime() - now.getTime();
+
+    setTimeout(() => {
+      setDateToToday();
+      loadAll(true); // show toast once at the day change
+      scheduleMidnightRollover(); // reschedule for next midnight
+    }, ms);
+  }
+// ====== BOOT ======
+  (function boot(){
+    setDateToToday();
 
     loadAll(true);
 
     // Auto refresh every 10 seconds (silent)
     setInterval(() => {
       loadAll(false);
-    }, 10000);
+    
+    scheduleMidnightRollover();
+}, 10000);
 
   })();
 </script>
