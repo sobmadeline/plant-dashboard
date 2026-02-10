@@ -274,9 +274,9 @@ function condenseSwimmingPoolDashboardOnly(items){
   };
 
   const timeToMin = (t) => {
-    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t||"").trim());
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(t || "").trim());
     if (!m) return null;
-    return (parseInt(m[1],10)*60) + parseInt(m[2],10);
+    return (parseInt(m[1],10) * 60) + parseInt(m[2],10);
   };
 
   const clean = (s) => String(s || "").trim();
@@ -289,11 +289,17 @@ function condenseSwimmingPoolDashboardOnly(items){
   const groups = new Map();
 
   function addToGroup(key, b, groupType, label){
+    // Ensure normalized times are used for comparisons + display
+    const start = normTime(b.start);
+    const end = normTime(b.end);
+    const sMin = timeToMin(start);
+    const eMin = timeToMin(end);
+
     if (!groups.has(key)){
-      const sMin = timeToMin(b.start);
-      const eMin = timeToMin(b.end);
       groups.set(key, {
         ...b,
+        start,
+        end,
         _groupType: groupType,   // "aquduck" | "lts"
         _labels: new Set(),
         _areas: new Set(),
@@ -302,32 +308,20 @@ function condenseSwimmingPoolDashboardOnly(items){
         _maxEnd: eMin,
       });
     }
+
     const g = groups.get(key);
 
     if (label) g._labels.add(label);
 
     // Keep the earliest start and latest end across the group
-    const sMin = timeToMin(b.start);
-    const eMin = timeToMin(b.end);
     if (sMin !== null && (g._minStart === null || g._minStart === undefined || sMin < g._minStart)){
       g._minStart = sMin;
-      g.start = b.start;
+      g.start = start;
     }
     if (eMin !== null && (g._maxEnd === null || g._maxEnd === undefined || eMin > g._maxEnd)){
       g._maxEnd = eMin;
-      g.end = b.end;
+      g.end = end;
     }
-
-    const area = clean(b.area);
-    if (area) g._areas.add(area);
-
-    const notes = clean(b.notes);
-    if (notes) g._notes.add(notes);
-  });
-    }
-    const g = groups.get(key);
-
-    if (label) g._labels.add(label);
 
     const area = clean(b.area);
     if (area) g._areas.add(area);
@@ -337,32 +331,28 @@ function condenseSwimmingPoolDashboardOnly(items){
   }
 
   for (const b of pool){
-    const name = clean(b.name).toLowerCase();
-
-    const start = normTime(b.start);
-    const end   = normTime(b.end);
-    const date  = clean(b.date);
+    const date = clean(b.date);
 
     // Match: Aqua Duck (6) / Aqua Duck 6 / Aqua Duck - 6
     let m = /^aqua\s*duck\b[\s\-:]*\(?\s*([0-9]+)\s*\)?/i.exec(clean(b.name));
     if (m){
       const label = m[1];
       const key = `pool|${date}|aquduck`;
-      addToGroup(key, {...b, start, end}, "aquduck", label);
+      addToGroup(key, b, "aquduck", label);
       continue;
     }
 
     // Match: Stage 3A / Stage 7/8 / Stage (2) etc
     m = /^stage\b[\s\-:]*\(?\s*([0-9a-z\/]+)\s*\)?/i.exec(clean(b.name));
     if (m){
-      const label = m[1].toUpperCase();
+      const label = String(m[1] || "").toUpperCase();
       const key = `pool|${date}|lts`;
-      addToGroup(key, {...b, start, end}, "lts", label);
+      addToGroup(key, b, "lts", label);
       continue;
     }
 
-    // Anything else stays the same
-    out.push({...b, start, end});
+    // Anything else stays the same (but normalize times)
+    out.push({...b, start: normTime(b.start), end: normTime(b.end)});
   }
 
   // turn groups into cards
@@ -391,7 +381,7 @@ function condenseSwimmingPoolDashboardOnly(items){
 
   return out.concat(rest);
 }
-  
+
   // ====== MERGE + RENDER ======
   function mergedForDate(dateStr){
     const all = []
