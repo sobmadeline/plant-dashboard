@@ -126,11 +126,6 @@
 
       <button class="rounded-2xl px-3 py-2 font-black text-white bg-plan"
         type="button" onclick="loadAll(true)">Refresh</button>
-
-      <a href="./bookings-add.html"
-        class="rounded-2xl px-3 py-2 font-black text-white bg-pindan inline-block">
-        + Add booking
-      </a>
     </div>
   </header>
 
@@ -178,6 +173,14 @@
     return String(s ?? "").replace(/[&<>"']/g, (c) => ({
       "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
     }[c]));
+  }
+
+  
+  // Remove PerfectMind note "gunk" after '@' (keeps only the human-relevant prefix)
+  function cleanNotes(s){
+    const str = String(s || "").trim();
+    if (!str) return "";
+    return str.split("@")[0].trim();
   }
 
   function toMin(t){
@@ -408,9 +411,16 @@ function condenseCrecheBookings(items){
     return (parseInt(m[1],10)*60) + parseInt(m[2],10);
   };
 
-  (items || []).forEach(b => {
+  const isCrecheBooking = (b) => {
     const v = clean(b.venue).toLowerCase();
-    if (v === "creche" || v.includes("creche")) creche.push(b);
+    const n = clean(b.name).toLowerCase();
+    const a = clean(b.activity).toLowerCase();
+    // PerfectMind sometimes puts Creche in the NAME/ACTIVITY rather than the venue column
+    return v.includes("creche") || n.includes("creche") || a.includes("creche");
+  };
+
+  (items || []).forEach(b => {
+    if (isCrecheBooking(b)) creche.push(b);
     else rest.push(b);
   });
 
@@ -427,7 +437,7 @@ function condenseCrecheBookings(items){
         ...b,
         start,
         end,
-                _areas: new Set(),
+        _areas: new Set(),
         _notes: new Set(),
         _minStart: sMin,
         _maxEnd: eMin,
@@ -436,10 +446,10 @@ function condenseCrecheBookings(items){
 
     const g = groups.get(key);
 
-        const area = clean(b.area);
+    const area = clean(b.area);
     if (area) g._areas.add(area);
 
-    const notes = clean(b.notes);
+    const notes = cleanNotes(clean(b.notes));
     if (notes) g._notes.add(notes);
 
     // Keep earliest start / latest end
@@ -455,7 +465,9 @@ function condenseCrecheBookings(items){
 
   for (const b of creche){
     const date = clean(b.date);
-    const key = `creche|${date}`;
+    const venue = clean(b.venue) || "Creche";
+    // Group per day per VENUE (so it stays in the correct column like Squash Courts)
+    const key = `creche|${date}|${venue}`;
     addToGroup(key, b);
   }
 
@@ -468,8 +480,6 @@ function condenseCrecheBookings(items){
 
     const notes = Array.from(g._notes);
     notes.sort((a,b) => a.localeCompare(b));
-    // If we have distinct names, surface them (helps staff know what got grouped)
-    
     g.notes = notes.join(" • ");
 
     out.push(g);
@@ -523,7 +533,7 @@ function condenseCrecheBookings(items){
 
       const g = map.get(key);
       if (b.area) g.areas.push(b.area);
-      if (b.notes) g.notesList.push(b.notes);
+      if (b.notes) g.notesList.push(cleanNotes(b.notes));
 
       // keep rowNumbers for manual deletes if needed later
       if (b.source === "manual" && b.rowNumber){
@@ -762,7 +772,7 @@ function renderBookingRow(b){
     : "";
 
   const area = (b.areaCombined || b.area || "").trim();
-  const notes = (b.notesCombined || b.notes || "").trim();
+  const notes = cleanNotes(b.notesCombined || b.notes || "");
   const activity = (b.activity || "").trim();
 
   const showActivity =
