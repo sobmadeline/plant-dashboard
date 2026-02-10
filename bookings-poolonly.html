@@ -295,10 +295,16 @@
 
         // Aqua Duck (e.g. "Aqua Duck (1, 2, 3, 6)")
         if (nameLower.includes("aqua duck")) {
-          const labelMatch = name.match(/\(([^\)]+)\)/);
-          const label = labelMatch ? labelMatch[1].trim() : "";
+          // Extract any level numbers anywhere in the name (handles "(1, 2, 3, 6)" and other formats)
+          const nums = (name.match(/\d+/g) || []).map(n => String(parseInt(n, 10))).filter(Boolean);
+          const uniqNums = Array.from(new Set(nums));
+
           const key = `pool|${clean(b.date)}|aquduck`;
-          addToGroup(key, b, "aquduck", label);
+          if (uniqNums.length) {
+            for (const n of uniqNums) addToGroup(key, b, "aquduck", n);
+          } else {
+            addToGroup(key, b, "aquduck", "");
+          }
           continue;
         }
 
