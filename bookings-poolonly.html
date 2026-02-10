@@ -136,7 +136,8 @@
         '"': "&quot;",
         "'": "&#39;",
       }[c]));
-    
+    }
+
     function normalizeDate(s){
       // Normalise to ISO YYYY-MM-DD so we can compare dates reliably
       const str = String(s ?? "").trim();
@@ -163,7 +164,6 @@
 
       return str;
     }
-}
 
     function toMin(t) {
       // HH:MM -> minutes
@@ -586,4 +586,3 @@
   </script>
 </body>
 </html>
-
