@@ -4,8 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="icon" type="image/x-icon" href="./images/favicon.ico">
-  <title>Back Bar Display - BRAC Tools</title>
+  <title>BRAC Tools – Back Bar</title>
 
+  <!-- Tailwind (matches index.html) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -30,89 +31,163 @@
   </script>
 </head>
 
-<body class="m-0 font-sans bg-bg text-slate-50 text-[15px] min-h-screen flex flex-col">
+<body class="m-0 font-sans bg-bg text-slate-50 min-h-screen flex flex-col">
 
-<!-- Header -->
-<header class="bg-darkturq px-2 py-3.5 md:flex items-center justify-between gap-4">
-  <div class="flex items-center gap-3 min-w-0">
-    <a href="index.html" class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide">
-      <img src="./images/WhiteWebsiteLogo.png" alt="BRAC Logo" class="object-contain" />
+<!-- Header (BIG for distance) -->
+<header class="bg-darkturq px-6 py-7 md:flex items-center justify-between gap-6">
+  <div class="flex items-center gap-5 min-w-0">
+    <a href="index.html"
+       class="max-h-16 max-w-[320px] rounded-xl text-white flex items-center justify-center font-black tracking-wide">
+      <img src="./images/WhiteWebsiteLogo.png" alt="BRAC Logo" class="object-contain max-h-16" />
     </a>
     <a href="index.html" class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide">
       <img src="./images/WhiteBackBarLogo.png" alt="BRAC Back Bar Logo" class="object-contain" />
     </a>
-  </div>
 </header>
 
 <!-- Main -->
-<main class="max-w-6xl mx-auto px-4 py-6 flex-1">
+<main class="max-w-6xl mx-auto w-full px-6 py-6 flex-1">
 
-  <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+  <!-- Controls (optional, but handy) -->
+  <div class="mb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div class="text-[18px] md:text-[20px] font-black text-slate-100/90">
+      Prices are dummy for now — easy to swap when DB is ready.
+    </div>
 
-    <!-- Beer -->
-    <section class="bg-card border border-line rounded-2xl p-5">
-      <h2 class="text-lg font-black mb-3">🍺 Beer</h2>
-      <ul class="space-y-2 text-sm font-semibold">
-        <li>Great Northern Super Crisp</li>
-        <li>Swan Draught</li>
-        <li>Asahi</li>
-      </ul>
-    </section>
-
-    <!-- Premix -->
-    <section class="bg-card border border-line rounded-2xl p-5">
-      <h2 class="text-lg font-black mb-3">🥃 Premix</h2>
-      <ul class="space-y-2 text-sm font-semibold">
-        <li>Bundaberg Rum & Cola</li>
-        <li>Jack Daniel’s & Cola</li>
-      </ul>
-    </section>
-
-    <!-- Soft Drinks -->
-    <section class="bg-card border border-line rounded-2xl p-5">
-      <h2 class="text-lg font-black mb-3">🥤 Soft Drinks</h2>
-      <ul class="space-y-2 text-sm font-semibold">
-        <li>Coca-Cola</li>
-        <li>Coke No Sugar</li>
-        <li>Sprite</li>
-      </ul>
-    </section>
-
-    <!-- Sports Drinks -->
-    <section class="bg-card border border-line rounded-2xl p-5">
-      <h2 class="text-lg font-black mb-3">🏃 Sports Drinks</h2>
-      <ul class="space-y-2 text-sm font-semibold">
-        <li>Gatorade</li>
-        <li>Powerade</li>
-      </ul>
-    </section>
-
-    <!-- Snacks -->
-    <section class="bg-card border border-line rounded-2xl p-5">
-      <h2 class="text-lg font-black mb-3">🍬 Snacks</h2>
-      <ul class="space-y-2 text-sm font-semibold">
-        <li>Mixed Lolly Bags</li>
-        <li>Crisp Packets</li>
-      </ul>
-    </section>
-
+    <div class="flex items-center gap-3">
+      <button id="toggleCols"
+              class="bg-card border border-line hover:border-pindan transition-colors rounded-2xl px-5 py-3 font-black text-[18px]">
+        Toggle Columns
+      </button>
+    </div>
   </div>
+
+  <!-- Menu grid (rendered by JS) -->
+  <div id="menuGrid" class="grid gap-5 md:grid-cols-2"></div>
+
 </main>
 
-<!-- Footer -->
-<footer class="bg-card border-t border-line px-4 py-3 sticky bottom-0">
-  <div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm font-semibold">
-    <div>
-      To be 18+, DOB must be on or before:
+<!-- Footer (BIG + sticky for distance) -->
+<footer class="bg-card border-t border-line px-6 py-5 sticky bottom-0">
+  <div class="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div class="text-[20px] md:text-[26px] font-black">
+      18+ DOB must be on or before:
       <span class="font-black text-teal" id="minDob">--/--/----</span>
     </div>
-    <div class="text-muted text-xs" id="perthNow">
+    <div class="text-muted text-[15px] md:text-[18px] font-extrabold" id="perthNow">
       Perth time: --
     </div>
   </div>
 </footer>
 
 <script>
+  // ---------------------------------------
+  // 1) Dummy menu data (edit here)
+  // ---------------------------------------
+  const MENU = [
+    {
+      category: "🍺 Beer",
+      items: [
+        { name: "Great Northern Super Crisp", price: 8.50 },
+        { name: "Swan Draught", price: 8.00 },
+        { name: "Asahi", price: 9.50 }
+      ]
+    },
+    {
+      category: "🥃 Premix",
+      items: [
+        { name: "Bundaberg Rum & Cola", price: 10.50 },
+        { name: "Jack Daniel’s & Cola", price: 11.00 }
+      ]
+    },
+    {
+      category: "🥤 Soft Drinks",
+      items: [
+        { name: "Coca-Cola", price: 4.50 },
+        { name: "Coke No Sugar", price: 4.50 },
+        { name: "Sprite", price: 4.50 }
+      ]
+    },
+    {
+      category: "🏃 Sports Drinks",
+      items: [
+        { name: "Powerade (600mL)", price: 5.00 },
+        { name: "Powerade (1L)", price: 6.50 }
+      ]
+    },
+    {
+      category: "🍬 Snacks",
+      items: [
+        { name: "Red Frog Bag (3 pack)", price: 0.50 },
+        { name: "Smiths Chip Packet", price: 3.00 },
+        { name: "Red Rock Deli Chip Packet", price: 3.20 }
+      ]
+    }
+  ];
+
+  // ---------------------------------------
+  // 2) Render menu cards (large type for 10m)
+  // ---------------------------------------
+  const money = (n) =>
+    new Intl.NumberFormat("en-AU", { style: "currency", currency: "AUD" }).format(n);
+
+  function renderMenu() {
+    const host = document.getElementById("menuGrid");
+    host.innerHTML = "";
+
+    MENU.forEach(section => {
+      const card = document.createElement("section");
+      card.className = "bg-card border border-line rounded-2xl p-7 md:p-8";
+
+      const h = document.createElement("h2");
+      h.className = "text-[26px] md:text-[32px] font-black mb-5";
+      h.textContent = section.category;
+
+      const ul = document.createElement("ul");
+      ul.className = "space-y-4";
+
+      section.items.forEach(item => {
+        const li = document.createElement("li");
+        li.className = "flex items-center justify-between gap-6";
+
+        // Name
+        const left = document.createElement("span");
+        left.className = "text-[20px] md:text-[26px] font-black leading-tight truncate";
+        left.textContent = item.name;
+
+        // Price
+        const right = document.createElement("span");
+        right.className = "shrink-0 text-[20px] md:text-[26px] font-black text-teal";
+        right.textContent = money(item.price);
+
+        li.appendChild(left);
+        li.appendChild(right);
+        ul.appendChild(li);
+      });
+
+      card.appendChild(h);
+      card.appendChild(ul);
+      host.appendChild(card);
+    });
+  }
+
+  // Column toggle for readability (2 columns default; 1 column for extra-large)
+  function setCols(cols) {
+    const grid = document.getElementById("menuGrid");
+    grid.classList.remove("md:grid-cols-1", "md:grid-cols-2");
+    grid.classList.add(cols === 1 ? "md:grid-cols-1" : "md:grid-cols-2");
+    localStorage.setItem("backbar_cols", String(cols));
+  }
+
+  document.getElementById("toggleCols").addEventListener("click", () => {
+    const cur = Number(localStorage.getItem("backbar_cols") || "2");
+    setCols(cur === 2 ? 1 : 2);
+  });
+
+  // ---------------------------------------
+  // 3) Footer: Minimum DOB for 18+ (Perth time)
+  //    Updates every minute (so it flips correctly at midnight)
+  // ---------------------------------------
   const TZ = "Australia/Perth";
 
   function getPerthDateParts() {
@@ -136,9 +211,8 @@
 
   function subtractYearsSafe({ y, m, d }, years) {
     const ny = y - years;
-    if (m === 2 && d === 29 && !isLeapYear(ny)) {
-      return { y: ny, m: 2, d: 28 };
-    }
+    // Feb 29 -> Feb 28 on non-leap year
+    if (m === 2 && d === 29 && !isLeapYear(ny)) return { y: ny, m: 2, d: 28 };
     return { y: ny, m, d };
   }
 
@@ -166,8 +240,13 @@
     document.getElementById("perthNow").textContent = "Broome time: " + nowStr;
   }
 
+  // Init
+  renderMenu();
   updateFooter();
   setInterval(updateFooter, 60 * 1000);
+
+  // Restore preferred column mode (default 2)
+  setCols(Number(localStorage.getItem("backbar_cols") || "2"));
 </script>
 
 </body>
