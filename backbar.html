@@ -178,19 +178,6 @@
     });
   }
 
-  // Column toggle for readability (2 columns default; 1 column for extra-large)
-  function setCols(cols) {
-    const grid = document.getElementById("menuGrid");
-    grid.classList.remove("md:grid-cols-1", "md:grid-cols-2");
-    grid.classList.add(cols === 1 ? "md:grid-cols-1" : "md:grid-cols-2");
-    localStorage.setItem("backbar_cols", String(cols));
-  }
-
-  document.getElementById("toggleCols").addEventListener("click", () => {
-    const cur = Number(localStorage.getItem("backbar_cols") || "2");
-    setCols(cur === 2 ? 1 : 2);
-  });
-
   // ---------------------------------------
   // 3) Footer: Minimum DOB for 18+ (Perth time)
   //    Updates every minute (so it flips correctly at midnight)
