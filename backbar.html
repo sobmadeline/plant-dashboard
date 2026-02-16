@@ -34,19 +34,32 @@
 <body class="m-0 font-sans bg-bg text-slate-50 min-h-screen flex flex-col">
 
 <!-- Header (BIG for distance) -->
-<header class="bg-darkturq px-6 py-7 md:flex items-center justify-between gap-6">
-  <div class="flex items-center gap-5 min-w-0">
-    <a href="index.html"
-       class="max-h-16 max-w-[320px] rounded-xl text-white flex items-center justify-center font-black tracking-wide">
-      <img src="./images/WhiteWebsiteLogo.png" alt="BRAC Logo" class="object-contain max-h-16" />
+<header class="bg-darkturq px-6 py-6 md:py-7 flex items-center justify-between gap-6">
+  <div class="flex items-center gap-6 min-w-0">
+    <!-- BRAC logo -->
+    <a href="index.html" class="shrink-0">
+      <img
+        src="./images/WhiteWebsiteLogo.png"
+        alt="BRAC Logo"
+        class="h-14 md:h-16 w-auto object-contain"
+      />
     </a>
-    <a href="index.html" class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide">
-      <img src="./images/WhiteBackBarLogo.png" alt="BRAC Back Bar Logo" class="object-contain" />
+
+    <!-- Back Bar logo (or title lockup) -->
+    <a href="index.html" class="shrink-0">
+      <img
+        src="./images/WhiteBackBarLogo.png"
+        alt="BRAC Back Bar Logo"
+        class="h-12 md:h-14 w-auto object-contain"
+      />
     </a>
+  </div>
 </header>
 
+
 <!-- Main -->
-<main class="max-w-6xl mx-auto w-full px-6 py-6 flex-1">
+<main class="max-w-6xl mx-auto w-full px-6 py-6 pb-28 flex-1">
+
 
   <!-- Controls (optional, but handy) -->
   <div class="mb-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
@@ -63,22 +76,24 @@
   </div>
 
   <!-- Menu grid (rendered by JS) -->
-  <div id="menuGrid" class="grid gap-5 md:grid-cols-2"></div>
+  <div id="menuGrid" class="grid gap-5 md:grid-cols-2 lg:grid-cols-3"></div>
 
 </main>
 
 <!-- Footer (BIG + sticky for distance) -->
-<footer class="bg-card border-t border-line px-6 py-5 sticky bottom-0">
-  <div class="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-    <div class="text-[20px] md:text-[26px] font-black">
+<footer class="bg-card border-t border-line px-6 py-6 sticky bottom-0">
+  <div class="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div class="text-[22px] md:text-[28px] font-black leading-snug">
       18+ DOB must be on or before:
       <span class="font-black text-teal" id="minDob">--/--/----</span>
     </div>
-    <div class="text-muted text-[15px] md:text-[18px] font-extrabold" id="perthNow">
-      Perth time: --
+
+    <div class="text-muted text-[16px] md:text-[18px] font-extrabold leading-snug" id="perthNow">
+      Broome time: --
     </div>
   </div>
 </footer>
+
 
 <script>
   // ---------------------------------------
