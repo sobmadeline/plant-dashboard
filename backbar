@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="icon" type="image/x-icon" href="./images/favicon.ico">
+  <title>Back Bar Display - BRAC Tools</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pindan: "#C54B00",
+            darkturq: "#004153",
+            bg: "#07141a",
+            card: "#0b2028",
+            line: "#14313b",
+            muted: "#cbd5e1",
+            good: "#15803d",
+            warn: "#ca8a04",
+            bad: "#b91c1c",
+            plan: "#2563eb",
+            teal: "#0f766e"
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="m-0 font-sans bg-bg text-slate-50 text-[15px] min-h-screen flex flex-col">
+
+<!-- Header -->
+<header class="bg-darkturq px-2 py-3.5 md:flex items-center justify-between gap-4">
+  <div class="flex items-center gap-3 min-w-0">
+    <a href="index.html" class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide">
+      <img src="./images/WhiteBackBarLogo.png" alt="BRAC Back Bar Logo" class="object-contain" />
+    </a>
+    <div class="min-w-0">
+      <div class="text-[18px] font-black leading-tight truncate">Back Bar</div>
+      <div class="text-[13px] opacity-85 mt-0.5 truncate">Menu Screen</div>
+    </div>
+  </div>
+</header>
+
+<!-- Main -->
+<main class="max-w-6xl mx-auto px-4 py-6 flex-1">
+
+  <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+
+    <!-- Beer -->
+    <section class="bg-card border border-line rounded-2xl p-5">
+      <h2 class="text-lg font-black mb-3">🍺 Beer</h2>
+      <ul class="space-y-2 text-sm font-semibold">
+        <li>Great Northern Super Crisp</li>
+        <li>Swan Draught</li>
+        <li>Asahi</li>
+      </ul>
+    </section>
+
+    <!-- Premix -->
+    <section class="bg-card border border-line rounded-2xl p-5">
+      <h2 class="text-lg font-black mb-3">🥃 Premix</h2>
+      <ul class="space-y-2 text-sm font-semibold">
+        <li>Bundaberg Rum & Cola</li>
+        <li>Jack Daniel’s & Cola</li>
+      </ul>
+    </section>
+
+    <!-- Soft Drinks -->
+    <section class="bg-card border border-line rounded-2xl p-5">
+      <h2 class="text-lg font-black mb-3">🥤 Soft Drinks</h2>
+      <ul class="space-y-2 text-sm font-semibold">
+        <li>Coca-Cola</li>
+        <li>Coke No Sugar</li>
+        <li>Sprite</li>
+      </ul>
+    </section>
+
+    <!-- Sports Drinks -->
+    <section class="bg-card border border-line rounded-2xl p-5">
+      <h2 class="text-lg font-black mb-3">🏃 Sports Drinks</h2>
+      <ul class="space-y-2 text-sm font-semibold">
+        <li>Gatorade</li>
+        <li>Powerade</li>
+      </ul>
+    </section>
+
+    <!-- Snacks -->
+    <section class="bg-card border border-line rounded-2xl p-5">
+      <h2 class="text-lg font-black mb-3">🍬 Snacks</h2>
+      <ul class="space-y-2 text-sm font-semibold">
+        <li>Mixed Lolly Bags</li>
+        <li>Crisp Packets</li>
+      </ul>
+    </section>
+
+  </div>
+</main>
+
+<!-- Footer -->
+<footer class="bg-card border-t border-line px-4 py-3 sticky bottom-0">
+  <div class="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-sm font-semibold">
+    <div>
+      To be 18+, DOB must be on or before:
+      <span class="font-black text-teal" id="minDob">--/--/----</span>
+    </div>
+    <div class="text-muted text-xs" id="perthNow">
+      Perth time: --
+    </div>
+  </div>
+</footer>
+
+<script>
+  const TZ = "Australia/Perth";
+
+  function getPerthDateParts() {
+    const parts = new Intl.DateTimeFormat("en-AU", {
+      timeZone: TZ,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date());
+
+    return {
+      y: Number(parts.find(p => p.type === "year").value),
+      m: Number(parts.find(p => p.type === "month").value),
+      d: Number(parts.find(p => p.type === "day").value)
+    };
+  }
+
+  function isLeapYear(y) {
+    return (y % 4 === 0 && y % 100 !== 0) || (y % 400 === 0);
+  }
+
+  function subtractYearsSafe({ y, m, d }, years) {
+    const ny = y - years;
+    if (m === 2 && d === 29 && !isLeapYear(ny)) {
+      return { y: ny, m: 2, d: 28 };
+    }
+    return { y: ny, m, d };
+  }
+
+  function fmtAU({ y, m, d }) {
+    return String(d).padStart(2, "0") + "/" +
+           String(m).padStart(2, "0") + "/" +
+           y;
+  }
+
+  function updateFooter() {
+    const today = getPerthDateParts();
+    const minDob = subtractYearsSafe(today, 18);
+    document.getElementById("minDob").textContent = fmtAU(minDob);
+
+    const nowStr = new Intl.DateTimeFormat("en-AU", {
+      timeZone: TZ,
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(new Date());
+
+    document.getElementById("perthNow").textContent = "Broome time: " + nowStr;
+  }
+
+  updateFooter();
+  setInterval(updateFooter, 60 * 1000);
+</script>
+
+</body>
+</html>
