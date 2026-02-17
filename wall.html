@@ -106,6 +106,11 @@
   </footer>
 
 <script>
+  const PLANT_API_URL = "/api/plant_status_list.php";
+  const NOTICE_API_URL = "/api/noticeboard_list.php"; // optional (may not exist yet)
+  const HANDOVER_API_URL = "/api/handover_active.php"; // optional (may not exist yet)
+
+  // Legacy CSV fallbacks (kept for safety; can be removed once DB endpoints exist)
   const PLANT_CSV_URL =
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=0&single=true&output=csv";
 
@@ -222,27 +227,47 @@
   }
 
   async function loadPlant(){
-    const res = await fetch(PLANT_CSV_URL, { cache:"no-store" });
-    if (!res.ok) throw new Error("Plant CSV fetch failed: " + res.status);
-    const csv = await res.text();
-    const data = parseCSV(csv);
+    // Prefer DB API; fall back to legacy CSV if the endpoint isn't available yet.
+    let items = [];
+    try {
+      const res = await fetch(PLANT_API_URL, { cache:"no-store" });
+      if (!res.ok) throw new Error("Plant API fetch failed: " + res.status);
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || "Plant API returned not-ok");
+      const rows = Array.isArray(j.rows) ? j.rows : [];
 
-    const headers = data[0];
-    const idx = (n) => headers.indexOf(n);
+      items = rows.map(r => ({
+        id: String(r.component_id || "").trim(),
+        name: String(r.component_name || "").trim(),
+        system: String(r.system_name || "").trim(),
+        status: normStatus(r.status),
+        updated: r.last_updated ? String(r.last_updated).trim() : ""
+      })).filter(x => x.id && x.name);
 
-    const iId = idx("Component ID");
-    const iName = idx("Component Name");
-    const iSystem = idx("System");
-    const iStatus = idx("Status");
-    const iUpdated = idx("Last Updated");
+    } catch (e) {
+      // CSV fallback (existing Google Sheets publish)
+      const res = await fetch(PLANT_CSV_URL, { cache:"no-store" });
+      if (!res.ok) throw new Error("Plant CSV fetch failed: " + res.status);
+      const csv = await res.text();
+      const data = parseCSV(csv);
 
-    const items = data.slice(1).map(r => ({
-      id: (r[iId] || "").trim(),
-      name: (r[iName] || "").trim(),
-      system: (r[iSystem] || "").trim(),
-      status: normStatus(r[iStatus]),
-      updated: (r[iUpdated] || "").trim()
-    })).filter(x => x.id && x.name);
+      const headers = data[0];
+      const idx = (n) => headers.indexOf(n);
+
+      const iId = idx("Component ID");
+      const iName = idx("Component Name");
+      const iSystem = idx("System");
+      const iStatus = idx("Status");
+      const iUpdated = idx("Last Updated");
+
+      items = data.slice(1).map(r => ({
+        id: (r[iId] || "").trim(),
+        name: (r[iName] || "").trim(),
+        system: (r[iSystem] || "").trim(),
+        status: normStatus(r[iStatus]),
+        updated: (r[iUpdated] || "").trim()
+      })).filter(x => x.id && x.name);
+    }
 
     const counts = { Offline:0, Degraded:0, Planned:0, Operational:0 };
     let maxUpdated = null;
@@ -310,26 +335,47 @@
   }
 
   async function loadNotices(){
-    const res = await fetch(NOTICE_CSV_URL, { cache:"no-store" });
-    if (!res.ok) throw new Error("Notice CSV fetch failed: " + res.status);
-    const csv = await res.text();
-    const data = parseCSV(csv);
-    const headers = data[0];
-    const idx = (n) => headers.indexOf(n);
+    let items = [];
+    try {
+      const res = await fetch(NOTICE_API_URL, { cache:"no-store" });
+      if (!res.ok) throw new Error("Notice API fetch failed: " + res.status);
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || "Notice API returned not-ok");
+      const rows = Array.isArray(j.rows) ? j.rows : [];
+      items = rows.map(r => ({
+        title: String(r.title || "").trim(),
+        msg: String(r.message || "").trim(),
+        cat: String(r.category || "").trim(),
+        start: r.start_at ? String(r.start_at).trim() : "",
+        end: r.end_at ? String(r.end_at).trim() : ""
+      })).filter(x => x.title || x.msg);
+    } catch (e) {
+      // Fallback to legacy CSV (or show empty if it also fails)
+      try {
+        const res = await fetch(NOTICE_CSV_URL, { cache:"no-store" });
+        if (!res.ok) throw new Error("Notice CSV fetch failed: " + res.status);
+        const csv = await res.text();
+        const data = parseCSV(csv);
+        const headers = data[0];
+        const idx = (n) => headers.indexOf(n);
 
-    const iTitle = idx("Title");
-    const iMsg = idx("Message");
-    const iCat = idx("Category");
-    const iStart = idx("Start");
-    const iEnd = idx("End");
+        const iTitle = idx("Title");
+        const iMsg = idx("Message");
+        const iCat = idx("Category");
+        const iStart = idx("Start");
+        const iEnd = idx("End");
 
-    const items = data.slice(1).map(r => ({
-      title: (r[iTitle] || "").trim(),
-      msg: (r[iMsg] || "").trim(),
-      cat: (r[iCat] || "").trim(),
-      start: (r[iStart] || "").trim(),
-      end: (r[iEnd] || "").trim(),
-    })).filter(x => x.title || x.msg);
+        items = data.slice(1).map(r => ({
+          title: (r[iTitle] || "").trim(),
+          msg: (r[iMsg] || "").trim(),
+          cat: (r[iCat] || "").trim(),
+          start: (r[iStart] || "").trim(),
+          end: (r[iEnd] || "").trim(),
+        })).filter(x => x.title || x.msg);
+      } catch (_) {
+        items = [];
+      }
+    }
 
     const active = items.filter(n => isActiveNotice(n.start, n.end)).slice(0, 6);
 
@@ -374,27 +420,53 @@
   }
 
   async function loadHandover(){
-    const res = await fetch(HANDOVER_CSV_URL, { cache:"no-store" });
-    if (!res.ok) throw new Error("Handover CSV fetch failed: " + res.status);
-    const csv = await res.text();
-    const data = parseCSV(csv);
-    const headers = data[0];
-    const row = data[1] || [];
-    const idx = (n) => headers.indexOf(n);
-
-    const active = (row[idx("Active")] || "").trim().toLowerCase();
-    const msg = (row[idx("Message")] || "").trim();
-    const created = (row[idx("Created")] || "").trim();
-    const ack = (row[idx("Acknowledged")] || "").trim().toLowerCase();
-
     const banner = document.getElementById("handoverBanner");
 
-    if (active === "yes" && ack !== "yes" && msg){
-      document.getElementById("handoverMsg").textContent = msg;
-      document.getElementById("handoverMeta").textContent = created ? ("Created: " + created) : "";
-      banner.classList.remove("hidden");
-    } else {
-      banner.classList.add("hidden");
+    try {
+      const res = await fetch(HANDOVER_API_URL, { cache:"no-store" });
+      if (!res.ok) throw new Error("Handover API fetch failed: " + res.status);
+      const j = await res.json();
+      if (!j.ok) throw new Error(j.error || "Handover API returned not-ok");
+
+      // Expected shape: { ok:true, active:true/false, message:"...", created_at:"..." }
+      const isActive = !!j.active;
+      const msg = String(j.message || "").trim();
+      const created = j.created_at ? String(j.created_at).trim() : "";
+
+      if (isActive && msg){
+        document.getElementById("handoverMsg").textContent = msg;
+        document.getElementById("handoverMeta").textContent = created ? ("Created: " + created) : "";
+        banner.classList.remove("hidden");
+      } else {
+        banner.classList.add("hidden");
+      }
+      return;
+    } catch (e) {
+      // Fallback to legacy CSV (or hide if not available)
+      try {
+        const res = await fetch(HANDOVER_CSV_URL, { cache:"no-store" });
+        if (!res.ok) throw new Error("Handover CSV fetch failed: " + res.status);
+        const csv = await res.text();
+        const data = parseCSV(csv);
+        const headers = data[0];
+        const row = data[1] || [];
+        const idx = (n) => headers.indexOf(n);
+
+        const active = (row[idx("Active")] || "").trim().toLowerCase();
+        const msg = (row[idx("Message")] || "").trim();
+        const created = (row[idx("Created")] || "").trim();
+        const ack = (row[idx("Acknowledged")] || "").trim().toLowerCase();
+
+        if (active === "yes" && ack !== "yes" && msg){
+          document.getElementById("handoverMsg").textContent = msg;
+          document.getElementById("handoverMeta").textContent = created ? ("Created: " + created) : "";
+          banner.classList.remove("hidden");
+        } else {
+          banner.classList.add("hidden");
+        }
+      } catch (_) {
+        banner.classList.add("hidden");
+      }
     }
   }
 
