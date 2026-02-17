@@ -105,10 +105,22 @@
 
     <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
       <div class="flex items-center justify-between gap-2.5">
-        <div class="font-black text-base">Current Status (read-only)</div>
+        <div class="font-black text-base">Plant Status (Database)</div>
         <span class="inline-block rounded-full border border-line px-2.5 py-1 text-xs font-black tracking-wide">Auto refresh</span>
       </div>
-      <div id="statusList" class="text-xs font-extrabold text-muted mt-3">Loading…</div>
+
+      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Search</label>
+      <input id="plantFilter" placeholder="Search component, system, location, issue, owner…"
+        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+
+      <div class="mt-3 rounded-2xl border border-line bg-[#06181f] p-3">
+        <div class="font-black text-sm">Quick view</div>
+        <div id="statusList" class="text-xs font-extrabold text-muted mt-2">Loading…</div>
+      </div>
+
+      <div class="mt-3 space-y-2" id="plantManagerList">
+        <div class="text-xs font-extrabold text-muted">Loading…</div>
+      </div>
     </div>
   </div>
 
@@ -480,8 +492,8 @@ window.addEventListener("error", (ev) => {
 });
 
 // === LIVE DATA URLS ===
-const PLANT_CSV_URL =
-  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=0&single=true&output=csv";
+const PLANT_API_LIST_URL = "/api/plant_status_list.php";
+const PLANT_API_UPDATE_URL = "/api/plant_status_update.php";
 
 const NOTICE_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=684780974&single=true&output=csv";
@@ -561,40 +573,209 @@ function audienceMatches(audienceCell, selected){
   return parts.includes(String(selected).trim().toLowerCase()) || parts.includes("all");
 }
 
-async function loadPlant(){
-  const res = await fetch(PLANT_CSV_URL, { cache:"no-store" });
-  const csv = await res.text();
-  const data = parseCSV(csv);
-  const headers = data[0];
-  const idx = (n) => headers.indexOf(n);
-
-  const iId = idx("Component ID");
-  const iName = idx("Component Name");
-  const iStatus = idx("Status");
-  const iIssue = idx("Issue Summary");
-
-  const items = data.slice(1).map(r => ({
-    id: (r[iId] || "").trim(),
-    name: (r[iName] || "").trim(),
-    status: (r[iStatus] || "").trim(),
-    issue: (r[iIssue] || "").trim()
-  })).filter(x => x.id && x.name);
-
-  cached = items;
-
-  const sel = document.getElementById("component");
-  sel.innerHTML = items.map(x =>
-    `<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)} (${escapeHtml(x.id)})</option>`
-  ).join("");
-
-  const list = items
-    .slice()
-    .sort((a,b) => rankStatus(a.status) - rankStatus(b.status) || a.name.localeCompare(b.name))
-    .map(it => `• ${it.name}: ${it.status || "Operational"}`)
-    .join("<br>");
-
-  document.getElementById("statusList").innerHTML = list || "No data";
+async function fetchPlantRows(){
+  const res = await fetch(PLANT_API_LIST_URL, { cache:"no-store" });
+  const j = await res.json();
+  if (!j || !j.ok) throw new Error((j && j.error) ? j.error : "Plant API error");
+  return Array.isArray(j.rows) ? j.rows : [];
 }
+
+function statusClass(status){
+  const s = String(status||"").toLowerCase().trim();
+  if (s === "offline") return "bg-bad";
+  if (s === "degraded") return "bg-warn";
+  if (s === "planned maintenance") return "bg-plan";
+  return "bg-good";
+}
+
+function renderPlantReadOnly(listEl, rows){
+  const list = rows
+    .slice()
+    .sort((a,b) => (a.status_order ?? 9999) - (b.status_order ?? 9999) || rankStatus(a.status) - rankStatus(b.status) || String(a.component_name||"").localeCompare(String(b.component_name||"")))
+    .map(it => `• ${escapeHtml(it.component_name || it.component_id)}: ${escapeHtml(it.status || "Operational")}`)
+    .join("<br>");
+  listEl.innerHTML = list || "No data";
+}
+
+let plantManagerFilter = "";
+
+function renderPlantManager(rows){
+  const wrap = document.getElementById("plantManagerList");
+  if (!wrap) return;
+
+  const q = (plantManagerFilter || "").toLowerCase().trim();
+  const filtered = !q ? rows : rows.filter(r => {
+    const hay = [
+      r.component_id, r.component_name, r.system_name, r.location_name,
+      r.status, r.condition_name, r.priority, r.issue_summary, r.owner, r.notes
+    ].join(" ").toLowerCase();
+    return hay.includes(q);
+  });
+
+  if (!filtered.length){
+    wrap.innerHTML = `<div class="text-xs font-extrabold text-muted">No matches.</div>`;
+    return;
+  }
+
+  const statusOptions = ["Operational","Degraded","Offline","Planned Maintenance"];
+  const conditionOptions = ["","Normal","Noise / Vibration","Reduced Flow","Pressure Issue","Leak Present","Electrical Fault","Under Investigation"];
+
+  wrap.innerHTML = filtered.map(r => {
+    const cid = String(r.component_id || "");
+    const title = `${escapeHtml(r.component_name || "")} <span class="opacity-70">(${escapeHtml(cid)})</span>`;
+    const badge = `<span class="inline-block rounded-full px-2.5 py-1 text-[11px] font-black text-white ${statusClass(r.status)}">${escapeHtml(r.status || "Operational")}</span>`;
+
+    const statusSel = `<select data-field="status" class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold">
+      ${statusOptions.map(s => `<option ${String(r.status||"").trim()===s?'selected':''}>${escapeHtml(s)}</option>`).join("")}
+    </select>`;
+
+    const condSel = `<select data-field="condition_name" class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold">
+      ${conditionOptions.map(s => `<option value="${escapeHtml(s)}" ${String(r.condition_name||"")===s?'selected':''}>${escapeHtml(s||"(optional)")}</option>`).join("")}
+    </select>`;
+
+    return `
+      <div class="border border-line rounded-2xl bg-[#06181f] p-3" data-cid="${escapeHtml(cid)}">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <div class="font-black text-sm truncate">${title}</div>
+            <div class="text-[11px] font-extrabold text-muted mt-1">
+              ${escapeHtml(r.system_name||"")} ${r.location_name ? "• " + escapeHtml(r.location_name) : ""}
+            </div>
+          </div>
+          <div class="shrink-0">${badge}</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 max-[700px]:grid-cols-1 mt-3">
+          <div>
+            <label class="block text-[11px] font-extrabold text-muted mb-1">Status</label>
+            ${statusSel}
+          </div>
+          <div>
+            <label class="block text-[11px] font-extrabold text-muted mb-1">Condition</label>
+            ${condSel}
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5 max-[700px]:grid-cols-1 mt-2.5">
+          <div>
+            <label class="block text-[11px] font-extrabold text-muted mb-1">Priority</label>
+            <input data-field="priority" value="${escapeHtml(r.priority||"")}" placeholder="e.g., High"
+              class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold placeholder:text-slate-400" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-extrabold text-muted mb-1">Owner</label>
+            <input data-field="owner" value="${escapeHtml(r.owner||"")}" placeholder="e.g., Maddie"
+              class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold placeholder:text-slate-400" />
+          </div>
+        </div>
+
+        <div class="mt-2.5">
+          <label class="block text-[11px] font-extrabold text-muted mb-1">Issue summary</label>
+          <input data-field="issue_summary" value="${escapeHtml(r.issue_summary||"")}" placeholder="Short summary"
+            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold placeholder:text-slate-400" />
+        </div>
+
+        <div class="mt-2.5">
+          <label class="block text-[11px] font-extrabold text-muted mb-1">Notes</label>
+          <textarea data-field="notes" class="w-full min-h-[70px] rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold placeholder:text-slate-400"
+            placeholder="Optional notes...">${escapeHtml(r.notes||"")}</textarea>
+        </div>
+
+        <div class="mt-2.5 flex items-center justify-between gap-2">
+          <div class="text-[11px] font-extrabold text-muted">
+            Last updated: ${escapeHtml(r.last_updated || "—")}
+          </div>
+          <button class="rounded-2xl px-3 py-2 font-black text-white bg-pindan"
+            type="button" onclick="savePlantRow('${escapeHtml(cid)}')">Save</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+async function loadPlant(){
+  try{
+    const rows = await fetchPlantRows();
+    cached = rows.map(r => ({
+      id: (r.component_id || "").trim(),
+      name: (r.component_name || "").trim(),
+      status: (r.status || "").trim(),
+      issue: (r.issue_summary || "").trim()
+    }));
+
+    const sel = document.getElementById("component");
+    if (sel){
+      sel.innerHTML = rows.map(x =>
+        `<option value="${escapeHtml(x.component_id)}">${escapeHtml(x.component_name)} (${escapeHtml(x.component_id)})</option>`
+      ).join("");
+    }
+
+    const statusListEl = document.getElementById("statusList");
+    if (statusListEl) renderPlantReadOnly(statusListEl, rows);
+
+    renderPlantManager(rows);
+
+    // Update summary in handover tab if it's open
+    const ps = document.getElementById("plantSummary");
+    if (ps && document.getElementById("tab-handover")?.style.display !== "none"){
+      ps.innerHTML = buildPlantSummary();
+    }
+  } catch(e){
+    console.error(e);
+    const statusListEl = document.getElementById("statusList");
+    if (statusListEl) statusListEl.textContent = "Could not load plant status from database.";
+    const wrap = document.getElementById("plantManagerList");
+    if (wrap) wrap.innerHTML = `<div class="text-xs font-extrabold text-muted">Could not load plant status.</div>`;
+  }
+}
+
+async function savePlantRow(componentId){
+  try{
+    const card = document.querySelector(`[data-cid="${CSS.escape(String(componentId))}"]`);
+    if (!card) return toast("Row not found.", 2200);
+
+    const get = (field) => card.querySelector(`[data-field="${field}"]`)?.value ?? "";
+
+    const payload = {
+      component_id: componentId,
+      status: get("status"),
+      condition_name: get("condition_name"),
+      priority: get("priority"),
+      owner: get("owner"),
+      issue_summary: get("issue_summary"),
+      notes: get("notes"),
+    };
+
+    toast("Saving…", 1400);
+
+    const res = await fetch(PLANT_API_UPDATE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    const j = await res.json().catch(()=> ({}));
+    if (!res.ok || !j.ok) throw new Error(j.error || "Save failed");
+
+    toast("Saved ✅", 1400);
+    await loadPlant();
+  } catch(e){
+    console.error(e);
+    toast("Save failed: " + (e.message || "Unknown error"), 3200);
+  }
+}
+
+function wirePlantManagerFilter(){
+  const input = document.getElementById("plantFilter");
+  if (!input) return;
+  input.addEventListener("input", async () => {
+    plantManagerFilter = input.value || "";
+    // re-render from server data so list stays consistent
+    await loadPlant();
+  });
+}
+
+
 
 function wireStatusButtons(){
   document.querySelectorAll("#statusButtons .btn").forEach(btn => {
@@ -621,22 +802,29 @@ async function submitUpdate(){
 
     toast("Saving…", 1500);
 
-    await postToAppsScript({
-      action: "updateComponent",
-      componentId,
-      status: selectedStatus,
-      condition,
-      summary
+    const res = await fetch(PLANT_API_UPDATE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        component_id: componentId,
+        status: selectedStatus,
+        condition_name: condition,
+        issue_summary: summary
+      })
     });
+
+    const j = await res.json().catch(()=> ({}));
+    if (!res.ok || !j.ok) throw new Error(j.error || "Save failed");
 
     toast("Saved ✅", 1600);
     document.getElementById("summary").value = "";
     await loadPlant();
   } catch(e){
     console.error(e);
-    toast("Save failed (network/browser error)", 3200);
+    toast("Save failed: " + (e.message || "network/browser error"), 3200);
   }
 }
+
 
 function buildPlantSummary(){
   const nonOp = cached
@@ -1324,6 +1512,7 @@ function deleteNoticeFromForm(){
 // Boot
 wireStatusButtons();
 wireAudienceCustom();
+wirePlantManagerFilter();
 loadPlant().then(() => {
   const aud = document.getElementById("audience");
   if (aud) aud.addEventListener("change", refreshHandover);
@@ -1331,6 +1520,7 @@ loadPlant().then(() => {
   console.error(err);
   toast("Could not load sheet data", 2500);
 });
+setInterval(()=>loadPlant(), 60000);
 </script>
 </body>
 </html>
