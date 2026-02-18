@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Staff Manager - BRAC Tools</title>
+  <link rel="icon" type="image/x-icon" href="./images/favicon.ico">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+  <div class="max-w-4xl mx-auto p-6">
+    <div class="flex items-center justify-between gap-4">
+      <h1 class="text-2xl font-black">Staff Manager</h1>
+      <a href="./update.html" class="text-sm underline text-slate-300">Back to Update</a>
+    </div>
+
+    <div id="locked" class="mt-6 p-4 rounded-xl border border-slate-700 bg-slate-900">
+      <div class="font-bold">Admin login required</div>
+      <div class="text-sm text-slate-300 mt-1">Log in on update.html first, then return here.</div>
+    </div>
+
+    <div id="app" class="hidden">
+      <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-4 rounded-xl border border-slate-700 bg-slate-900">
+          <div class="font-black mb-2">Add staff</div>
+
+          <label class="text-xs text-slate-300 font-bold">Name</label>
+          <input id="name" class="w-full mt-1 px-3 py-2 rounded bg-slate-950 border border-slate-700" placeholder="e.g. Maddie">
+
+          <label class="text-xs text-slate-300 font-bold mt-3 block">PIN</label>
+          <input id="pin" type="password" class="w-full mt-1 px-3 py-2 rounded bg-slate-950 border border-slate-700" placeholder="4–8 digits">
+
+          <label class="text-xs text-slate-300 font-bold mt-3 block">RFID UID (optional)</label>
+          <input id="rfid" class="w-full mt-1 px-3 py-2 rounded bg-slate-950 border border-slate-700" placeholder="Tap card + read UID, or paste">
+
+          <label class="text-xs text-slate-300 font-bold mt-3 block">Role</label>
+          <select id="role" class="w-full mt-1 px-3 py-2 rounded bg-slate-950 border border-slate-700">
+            <option value="staff">staff</option>
+            <option value="admin">admin</option>
+          </select>
+
+          <button id="addBtn" class="mt-4 w-full py-2 rounded bg-blue-600 font-black">Add</button>
+          <div id="msg" class="text-sm mt-2 text-slate-300"></div>
+        </div>
+
+        <div class="p-4 rounded-xl border border-slate-700 bg-slate-900">
+          <div class="font-black mb-2">How RFID works</div>
+          <div class="text-sm text-slate-300 leading-relaxed">
+            Most RFID readers act like a keyboard: they “type” the UID then press Enter.<br><br>
+            If you want, we can add a “Scan RFID” mode that auto-captures the next scan and assigns it to a user.
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-6 p-4 rounded-xl border border-slate-700 bg-slate-900">
+        <div class="flex items-center justify-between">
+          <div class="font-black">Staff list</div>
+          <button id="refreshBtn" class="px-3 py-2 rounded border border-slate-700 bg-slate-950 font-bold text-sm">Refresh</button>
+        </div>
+
+        <div class="overflow-x-auto mt-3">
+          <table class="min-w-full text-sm">
+            <thead class="text-slate-300">
+              <tr>
+                <th class="text-left py-2">Name</th>
+                <th class="text-left py-2">Role</th>
+                <th class="text-left py-2">RFID</th>
+                <th class="text-left py-2">Active</th>
+                <th class="text-left py-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+async function api(path, body) {
+  const res = await fetch(path, body ? {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  } : undefined);
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || !j.ok) throw new Error(j.error || ("HTTP " + res.status));
+  return j;
+}
+
+async function checkAdmin() {
+  try {
+    const j = await api("/api/staff_list.php");
+    document.getElementById("locked").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    render(j.rows);
+  } catch (e) {
+    document.getElementById("locked").classList.remove("hidden");
+    document.getElementById("app").classList.add("hidden");
+  }
+}
+
+function escapeHtml(s){ return String(s??"").replace(/[&<>"']/g,c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+
+function render(list) {
+  const tbody = document.getElementById("rows");
+  tbody.innerHTML = (list||[]).map(u => `
+    <tr class="border-t border-slate-800">
+      <td class="py-2 pr-2 font-bold">${escapeHtml(u.name)}</td>
+      <td class="py-2 pr-2">${escapeHtml(u.role)}</td>
+      <td class="py-2 pr-2">${u.rfid_uid ? escapeHtml(u.rfid_uid) : '<span class="text-slate-500">—</span>'}</td>
+      <td class="py-2 pr-2">${u.active ? 'Yes' : '<span class="text-slate-500">No</span>'}</td>
+      <td class="py-2 pr-2">
+        <button class="px-2 py-1 rounded border border-slate-700 bg-slate-950 text-xs font-bold" onclick="resetPin(${u.id})">Reset PIN</button>
+        <button class="px-2 py-1 rounded border border-slate-700 bg-slate-950 text-xs font-bold ml-2" onclick="toggleActive(${u.id}, ${u.active ? 0 : 1})">${u.active ? 'Deactivate' : 'Activate'}</button>
+        <button class="px-2 py-1 rounded border border-slate-700 bg-slate-950 text-xs font-bold ml-2" onclick="clearRfid(${u.id})">Clear RFID</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function loadList(){
+  const j = await api("/api/staff_list.php");
+  render(j.rows);
+}
+
+document.getElementById("refreshBtn").onclick = () => loadList().catch(alert);
+
+document.getElementById("addBtn").onclick = async () => {
+  const name = document.getElementById("name").value.trim();
+  const pin = document.getElementById("pin").value.trim();
+  const rfid = document.getElementById("rfid").value.trim();
+  const role = document.getElementById("role").value;
+
+  const msg = document.getElementById("msg");
+  msg.textContent = "";
+  try {
+    await api("/api/staff_create.php", { name, pin, rfid_uid: rfid || null, role });
+    msg.textContent = "Added!";
+    document.getElementById("name").value = "";
+    document.getElementById("pin").value = "";
+    document.getElementById("rfid").value = "";
+    await loadList();
+  } catch (e) {
+    msg.textContent = "Error: " + e.message;
+  }
+};
+
+async function resetPin(id){
+  const newPin = prompt("Enter a NEW PIN for this staff member:");
+  if (!newPin) return;
+  await api("/api/staff_set_pin.php", { id, pin: newPin.trim() });
+  alert("PIN updated.");
+}
+
+async function toggleActive(id, active){
+  await api("/api/staff_set_active.php", { id, active });
+  await loadList();
+}
+
+async function clearRfid(id){
+  await api("/api/staff_set_rfid.php", { id, rfid_uid: null });
+  await loadList();
+}
+
+checkAdmin();
+</script>
+</body>
+</html>
