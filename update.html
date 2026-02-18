@@ -49,7 +49,7 @@
            placeholder="PIN (or scan RFID)">
 
     <button id="loginBtn"
-            class="w-full mt-2 py-2 rounded bg-bluex font-black">
+            class="w-full mt-2 py-2 rounded bg-plan font-black">
       Unlock
     </button>
 
@@ -491,6 +491,23 @@ async function loginWithValue(val){
   document.getElementById('loginGate').style.display = 'none';
 }
 
+// Button click -> attempt login
+document.getElementById('loginBtn').onclick = async () => {
+  const v = document.getElementById('loginPin').value.trim();
+  const errEl = document.getElementById('loginErr');
+  if (errEl){ errEl.textContent = ""; errEl.classList.add("hidden"); }
+  try {
+    await loginWithValue(v);
+  } catch (e) {
+    if (errEl){
+      errEl.textContent = e.message || String(e);
+      errEl.classList.remove("hidden");
+    }
+    toast("Login failed: " + (e.message || e), 3500);
+  }
+};
+
+
 // RFID readers usually type the UID + Enter
 document.getElementById('loginPin').addEventListener('keydown', async (e) => {
   if (e.key === 'Enter') {
@@ -498,11 +515,18 @@ document.getElementById('loginPin').addEventListener('keydown', async (e) => {
   }
 });
 
-// Auto-check session on load
-fetch('/api/auth_check.php').then(r => r.json()).then(j => {
-  if (j.ok) document.getElementById('loginGate').style.display = 'none';
-});  
-  
+// Auto-check session on load (tolerate 404/HTML responses)
+fetch('/api/auth_check.php', { cache: 'no-store' })
+  .then(async (r) => {
+    const ct = (r.headers.get('content-type') || '').toLowerCase();
+    if (!r.ok || !ct.includes('application/json')) return null;
+    return r.json().catch(()=>null);
+  })
+  .then((j) => {
+    if (j && j.ok) document.getElementById('loginGate').style.display = 'none';
+  })
+  .catch(() => { /* ignore */ });
+
 async function apiGet(path){
   const res = await fetch(API_BASE + path, { cache:"no-store" });
   if (!res.ok) throw new Error("GET " + path + " failed: " + res.status);
