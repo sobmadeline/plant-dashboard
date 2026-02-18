@@ -210,13 +210,13 @@
       <!-- Pool tabs -->
       <div class="mt-3 flex flex-wrap gap-2">
         <button type="button" class="chemPoolTab px-3 py-2 rounded-xl border border-line bg-[#06181f] font-black text-sm hover:border-pindan"
-          data-pool="main">BRAC 25m & Leisure Pool</button>
+          data-pool="brac">BRAC 25m & Leisure Pool</button>
 
         <button type="button" class="chemPoolTab px-3 py-2 rounded-xl border border-line bg-[#06181f] font-black text-sm hover:border-pindan"
-          data-pool="learn">Town Beach Water Park</button>
+          data-pool="tbwp">Town Beach Water Park</button>
 
         <button type="button" class="chemPoolTab px-3 py-2 rounded-xl border border-line bg-[#06181f] font-black text-sm hover:border-pindan"
-          data-pool="splash">Cable Beach Water Park</button>
+          data-pool="cbwp">Cable Beach Water Park</button>
 
         <button type="button" class="chemPoolTab px-3 py-2 rounded-xl border border-line bg-[#06181f] font-black text-sm hover:border-pindan"
           data-pool="custom">Custom</button>
@@ -479,6 +479,12 @@
  * WRITE HELPER (NEW)
  ***********************/
 const API_BASE = "/api";
+
+// Boot
+wireStatusButtons();
+wireAudienceCustom();
+
+
 
 async function loginWithValue(val){
   val = (val || "").trim();
@@ -1155,13 +1161,13 @@ function closeChemModal(){
 
 // --- POOL PRESETS (edit these volumes to your real pools) ---
 const CHEM_POOLS = {
-  main:   { label: "BRAC 25m & Leisure Pool", vol: 1000, unit: "kL" },
-  learn:  { label: "Town Beach Water Park", vol: 0, unit: "kL" },
-  splash: { label: "Cable Beach Water Park", vol: 0, unit: "kL" },
+  brac:   { label: "BRAC 25m & Leisure Pool", vol: 1000, unit: "kL" },
+  tbwp:  { label: "Town Beach Water Park", vol: 0, unit: "kL" },
+  cbwp: { label: "Cable Beach Water Park", vol: 0, unit: "kL" },
   custom: { label: "Custom", vol: null, unit: null }
 };
 
-let selectedChemPool = "main";
+let selectedChemPool = "brac";
 
 function fmtVol(vol, unit){
   if (vol == null) return "Custom";
@@ -1224,7 +1230,7 @@ function initChemUI(){
     btn.addEventListener("click", () => setChemPool(btn.dataset.pool));
   });
   wireChemVolumeLabel();
-  setChemPool("main"); // default
+  setChemPool("brac"); // default
 }
 
 
@@ -1490,9 +1496,12 @@ function deleteNoticeFromForm(){
   deleteNotice(row);
 }
 
-// Boot
-wireStatusButtons();
-wireAudienceCustom();
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initChemUI);
+} else {
+  initChemUI();
+}
+
 loadPlant().then(() => {
   const aud = document.getElementById("audience");
   if (aud) aud.addEventListener("change", refreshHandover);
@@ -1500,6 +1509,8 @@ loadPlant().then(() => {
   console.error(err);
   toast("Could not load data", 2500);
 });
+
+
 </script>
 <script>
 
