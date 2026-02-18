@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="icon" type="image/x-icon" href="./images/favicon.ico">
   <title>Centre Management - BRAC Tools</title>
 
   <!-- Tailwind CDN -->
@@ -106,22 +105,10 @@
 
     <div class="bg-card border border-line rounded-2xl p-3.5 mb-3">
       <div class="flex items-center justify-between gap-2.5">
-        <div class="font-black text-base">Plant Status (Database)</div>
+        <div class="font-black text-base">Current Status (read-only)</div>
         <span class="inline-block rounded-full border border-line px-2.5 py-1 text-xs font-black tracking-wide">Auto refresh</span>
       </div>
-
-      <label class="block text-sm font-extrabold text-muted mt-3 mb-1">Search</label>
-      <input id="plantFilter" placeholder="Search component, system, location, issue, owner…"
-        class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
-
-      <div class="mt-3 rounded-2xl border border-line bg-[#06181f] p-3">
-        <div class="font-black text-sm">Quick view</div>
-        <div id="statusList" class="text-xs font-extrabold text-muted mt-2">Loading…</div>
-      </div>
-
-      <div class="mt-3 space-y-2" id="plantManagerList">
-        <div class="text-xs font-extrabold text-muted">Loading…</div>
-      </div>
+      <div id="statusList" class="text-xs font-extrabold text-muted mt-3">Loading…</div>
     </div>
   </div>
 
@@ -463,28 +450,28 @@
 /***********************
  * WRITE HELPER (NEW)
  ***********************/
-function postToAppsScript(params) {
-  return new Promise((resolve) => {
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = WRITE_URL;
-    form.target = "writeSink";
+const API_BASE = "/api";
 
-    Object.entries(params).forEach(([k, v]) => {
-      if (v === undefined || v === null) return;
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = k;
-      input.value = String(v);
-      form.appendChild(input);
-    });
+async function apiGet(path){
+  const res = await fetch(API_BASE + path, { cache:"no-store" });
+  if (!res.ok) throw new Error("GET " + path + " failed: " + res.status);
+  const j = await res.json();
+  if (!j || !j.ok) throw new Error((j && j.error) ? j.error : ("API not-ok: " + path));
+  return j;
+}
 
-    document.body.appendChild(form);
-    form.submit();
-    form.remove();
-
-    setTimeout(resolve, 900);
+async function apiPost(path, payload){
+  const res = await fetch(API_BASE + path, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload || {})
   });
+  const j = await res.json().catch(()=>null);
+  if (!res.ok || !j || !j.ok){
+    const err = (j && j.error) ? j.error : ("POST " + path + " failed: " + res.status);
+    throw new Error(err);
+  }
+  return j;
 }
 
 window.addEventListener("error", (ev) => {
@@ -492,20 +479,26 @@ window.addEventListener("error", (ev) => {
   toast("JS ERROR: " + msg, 6000);
 });
 
-// === LIVE DATA URLS ===
-const PLANT_API_LIST_URL = "/api/plant_status_list.php";
-const PLANT_API_UPDATE_URL = "/api/plant_status_update.php";
+// === DB API URLS (preferred) ===
+const PLANT_API_URL = API_BASE + "/plant_status_list.php";
+const NOTICE_API_URL = API_BASE + "/noticeboard_list.php";        // active notices (optionally filtered)
+const NOTICE_ADMIN_API_URL = API_BASE + "/noticeboard_admin_list.php"; // active/all for manager
+const NOTICE_SAVE_API_URL = API_BASE + "/noticeboard_save.php";
+const NOTICE_DELETE_API_URL = API_BASE + "/noticeboard_delete.php";
+
+const HANDOVER_API_URL = API_BASE + "/handover_active.php";
+const HANDOVER_SET_API_URL = API_BASE + "/handover_set.php";
+const HANDOVER_ACK_API_URL = API_BASE + "/handover_ack.php";
+
+// === Legacy CSV fallbacks (kept for safety) ===
+const PLANT_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=0&single=true&output=csv";
 
 const NOTICE_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=684780974&single=true&output=csv";
 
 const HANDOVER_CSV_URL =
   "https://docs.google.com/spreadsheets/d/e/2PACX-1vSg5Y7GWAhMmpNHxvGOORvfm9v5RTD2PfPrRaljFs9yPmf8uosPuWVzkBfm1tm0njRwvQ40ukJa4ZL1/pub?gid=871823190&single=true&output=csv";
-
-// Your Apps Script web app endpoint (WRITE)
-const WRITE_URL =
-  "https://script.google.com/macros/s/AKfycbzygxLa5-VSIkWuFe1jWt930bK0kMhrn0QKR8aAKFuF5wSaRagoATKWMfESgQu6OkizHQ/exec";
-
 let cached = [];
 let selectedStatus = "";
 let chemLast = null;
@@ -574,209 +567,54 @@ function audienceMatches(audienceCell, selected){
   return parts.includes(String(selected).trim().toLowerCase()) || parts.includes("all");
 }
 
-async function fetchPlantRows(){
-  const res = await fetch(PLANT_API_LIST_URL, { cache:"no-store" });
-  const j = await res.json();
-  if (!j || !j.ok) throw new Error((j && j.error) ? j.error : "Plant API error");
-  return Array.isArray(j.rows) ? j.rows : [];
-}
-
-function statusClass(status){
-  const s = String(status||"").toLowerCase().trim();
-  if (s === "offline") return "bg-bad";
-  if (s === "degraded") return "bg-warn";
-  if (s === "planned maintenance") return "bg-plan";
-  return "bg-good";
-}
-
-function renderPlantReadOnly(listEl, rows){
-  const list = rows
-    .slice()
-    .sort((a,b) => (a.status_order ?? 9999) - (b.status_order ?? 9999) || rankStatus(a.status) - rankStatus(b.status) || String(a.component_name||"").localeCompare(String(b.component_name||"")))
-    .map(it => `• ${escapeHtml(it.component_name || it.component_id)}: ${escapeHtml(it.status || "Operational")}`)
-    .join("<br>");
-  listEl.innerHTML = list || "No data";
-}
-
-let plantManagerFilter = "";
-
-function renderPlantManager(rows){
-  const wrap = document.getElementById("plantManagerList");
-  if (!wrap) return;
-
-  const q = (plantManagerFilter || "").toLowerCase().trim();
-  const filtered = !q ? rows : rows.filter(r => {
-    const hay = [
-      r.component_id, r.component_name, r.system_name, r.location_name,
-      r.status, r.condition_name, r.priority, r.issue_summary, r.owner, r.notes
-    ].join(" ").toLowerCase();
-    return hay.includes(q);
-  });
-
-  if (!filtered.length){
-    wrap.innerHTML = `<div class="text-xs font-extrabold text-muted">No matches.</div>`;
-    return;
-  }
-
-  const statusOptions = ["Operational","Degraded","Offline","Planned Maintenance"];
-  const conditionOptions = ["","Normal","Noise / Vibration","Reduced Flow","Pressure Issue","Leak Present","Electrical Fault","Under Investigation"];
-
-  wrap.innerHTML = filtered.map(r => {
-    const cid = String(r.component_id || "");
-    const title = `${escapeHtml(r.component_name || "")} <span class="opacity-70">(${escapeHtml(cid)})</span>`;
-    const badge = `<span class="inline-block rounded-full px-2.5 py-1 text-[11px] font-black text-white ${statusClass(r.status)}">${escapeHtml(r.status || "Operational")}</span>`;
-
-    const statusSel = `<select data-field="status" class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold">
-      ${statusOptions.map(s => `<option ${String(r.status||"").trim()===s?'selected':''}>${escapeHtml(s)}</option>`).join("")}
-    </select>`;
-
-    const condSel = `<select data-field="condition_name" class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold">
-      ${conditionOptions.map(s => `<option value="${escapeHtml(s)}" ${String(r.condition_name||"")===s?'selected':''}>${escapeHtml(s||"(optional)")}</option>`).join("")}
-    </select>`;
-
-    return `
-      <div class="border border-line rounded-2xl bg-[#06181f] p-3" data-cid="${escapeHtml(cid)}">
-        <div class="flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <div class="font-black text-sm truncate">${title}</div>
-            <div class="text-[11px] font-extrabold text-muted mt-1">
-              ${escapeHtml(r.system_name||"")} ${r.location_name ? "• " + escapeHtml(r.location_name) : ""}
-            </div>
-          </div>
-          <div class="shrink-0">${badge}</div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2.5 max-[700px]:grid-cols-1 mt-3">
-          <div>
-            <label class="block text-[11px] font-extrabold text-muted mb-1">Status</label>
-            ${statusSel}
-          </div>
-          <div>
-            <label class="block text-[11px] font-extrabold text-muted mb-1">Condition</label>
-            ${condSel}
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2.5 max-[700px]:grid-cols-1 mt-2.5">
-          <div>
-            <label class="block text-[11px] font-extrabold text-muted mb-1">Priority</label>
-            <input data-field="priority" value="${escapeHtml(r.priority||"")}" placeholder="e.g., High"
-              class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold placeholder:text-slate-400" />
-          </div>
-          <div>
-            <label class="block text-[11px] font-extrabold text-muted mb-1">Owner</label>
-            <input data-field="owner" value="${escapeHtml(r.owner||"")}" placeholder="e.g., Maddie"
-              class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold placeholder:text-slate-400" />
-          </div>
-        </div>
-
-        <div class="mt-2.5">
-          <label class="block text-[11px] font-extrabold text-muted mb-1">Issue summary</label>
-          <input data-field="issue_summary" value="${escapeHtml(r.issue_summary||"")}" placeholder="Short summary"
-            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold placeholder:text-slate-400" />
-        </div>
-
-        <div class="mt-2.5">
-          <label class="block text-[11px] font-extrabold text-muted mb-1">Notes</label>
-          <textarea data-field="notes" class="w-full min-h-[70px] rounded-xl border border-line bg-[#06181f] px-3 py-2 text-sm font-extrabold placeholder:text-slate-400"
-            placeholder="Optional notes...">${escapeHtml(r.notes||"")}</textarea>
-        </div>
-
-        <div class="mt-2.5 flex items-center justify-between gap-2">
-          <div class="text-[11px] font-extrabold text-muted">
-            Last updated: ${escapeHtml(r.last_updated || "—")}
-          </div>
-          <button class="rounded-2xl px-3 py-2 font-black text-white bg-pindan"
-            type="button" onclick="savePlantRow('${escapeHtml(cid)}')">Save</button>
-        </div>
-      </div>
-    `;
-  }).join("");
-}
-
 async function loadPlant(){
+  // Prefer DB API; fall back to legacy CSV if needed.
+  let items = [];
   try{
-    const rows = await fetchPlantRows();
-    cached = rows.map(r => ({
-      id: (r.component_id || "").trim(),
-      name: (r.component_name || "").trim(),
-      status: (r.status || "").trim(),
-      issue: (r.issue_summary || "").trim()
-    }));
-
-    const sel = document.getElementById("component");
-    if (sel){
-      sel.innerHTML = rows.map(x =>
-        `<option value="${escapeHtml(x.component_id)}">${escapeHtml(x.component_name)} (${escapeHtml(x.component_id)})</option>`
-      ).join("");
-    }
-
-    const statusListEl = document.getElementById("statusList");
-    if (statusListEl) renderPlantReadOnly(statusListEl, rows);
-
-    renderPlantManager(rows);
-
-    // Update summary in handover tab if it's open
-    const ps = document.getElementById("plantSummary");
-    if (ps && document.getElementById("tab-handover")?.style.display !== "none"){
-      ps.innerHTML = buildPlantSummary();
-    }
+    const j = await apiGet("/plant_status_list.php");
+    const rows = Array.isArray(j.rows) ? j.rows : [];
+    items = rows.map(r => ({
+      id: String(r.component_id || "").trim(),
+      name: String(r.component_name || "").trim(),
+      status: String(r.status || "").trim(),
+      issue: String(r.issue_summary || "").trim()
+    })).filter(x => x.id && x.name);
   } catch(e){
-    console.error(e);
-    const statusListEl = document.getElementById("statusList");
-    if (statusListEl) statusListEl.textContent = "Could not load plant status from database.";
-    const wrap = document.getElementById("plantManagerList");
-    if (wrap) wrap.innerHTML = `<div class="text-xs font-extrabold text-muted">Could not load plant status.</div>`;
+    // Legacy CSV fallback
+    const res = await fetch(PLANT_CSV_URL, { cache:"no-store" });
+    const csv = await res.text();
+    const data = parseCSV(csv);
+    const headers = data[0];
+    const idx = (n) => headers.indexOf(n);
+
+    const iId = idx("Component ID");
+    const iName = idx("Component Name");
+    const iStatus = idx("Status");
+    const iIssue = idx("Issue Summary");
+
+    items = data.slice(1).map(r => ({
+      id: (r[iId] || "").trim(),
+      name: (r[iName] || "").trim(),
+      status: (r[iStatus] || "").trim(),
+      issue: (r[iIssue] || "").trim()
+    })).filter(x => x.id && x.name);
   }
+
+  cached = items;
+
+  const sel = document.getElementById("component");
+  sel.innerHTML = items.map(x =>
+    `<option value="${escapeHtml(x.id)}">${escapeHtml(x.name)} (${escapeHtml(x.id)})</option>`
+  ).join("");
+
+  const list = items
+    .slice()
+    .sort((a,b) => rankStatus(a.status) - rankStatus(b.status) || a.name.localeCompare(b.name))
+    .map(it => `• ${it.name}: ${it.status || "Operational"}`)
+    .join("<br>");
+
+  document.getElementById("statusList").innerHTML = list || "No data";
 }
-
-async function savePlantRow(componentId){
-  try{
-    const card = document.querySelector(`[data-cid="${CSS.escape(String(componentId))}"]`);
-    if (!card) return toast("Row not found.", 2200);
-
-    const get = (field) => card.querySelector(`[data-field="${field}"]`)?.value ?? "";
-
-    const payload = {
-      component_id: componentId,
-      status: get("status"),
-      condition_name: get("condition_name"),
-      priority: get("priority"),
-      owner: get("owner"),
-      issue_summary: get("issue_summary"),
-      notes: get("notes"),
-    };
-
-    toast("Saving…", 1400);
-
-    const res = await fetch(PLANT_API_UPDATE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    const j = await res.json().catch(()=> ({}));
-    if (!res.ok || !j.ok) throw new Error(j.error || "Save failed");
-
-    toast("Saved ✅", 1400);
-    await loadPlant();
-  } catch(e){
-    console.error(e);
-    toast("Save failed: " + (e.message || "Unknown error"), 3200);
-  }
-}
-
-function wirePlantManagerFilter(){
-  const input = document.getElementById("plantFilter");
-  if (!input) return;
-  input.addEventListener("input", async () => {
-    plantManagerFilter = input.value || "";
-    // re-render from server data so list stays consistent
-    await loadPlant();
-  });
-}
-
-
 
 function wireStatusButtons(){
   document.querySelectorAll("#statusButtons .btn").forEach(btn => {
@@ -803,29 +641,21 @@ async function submitUpdate(){
 
     toast("Saving…", 1500);
 
-    const res = await fetch(PLANT_API_UPDATE_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        component_id: componentId,
-        status: selectedStatus,
-        condition_name: condition,
-        issue_summary: summary
-      })
+    await apiPost("/plant_status_update.php", {
+      component_id: componentId,
+      status: selectedStatus,
+      condition_name: condition,
+      issue_summary: summary
     });
-
-    const j = await res.json().catch(()=> ({}));
-    if (!res.ok || !j.ok) throw new Error(j.error || "Save failed");
 
     toast("Saved ✅", 1600);
     document.getElementById("summary").value = "";
     await loadPlant();
   } catch(e){
     console.error(e);
-    toast("Save failed: " + (e.message || "network/browser error"), 3200);
+    toast("Save failed (network/browser error)", 3200);
   }
 }
-
 
 function buildPlantSummary(){
   const nonOp = cached
@@ -844,38 +674,64 @@ function buildPlantSummary(){
 async function loadNoticesForHandover(){
   const selected = document.getElementById("audience").value;
 
-  const res = await fetch(NOTICE_CSV_URL, { cache:"no-store" });
-  const csv = await res.text();
-  const rows = parseCSV(csv);
-  const headers = rows[0];
-  const idx = (n) => headers.indexOf(n);
+  // Prefer DB API (already filtered to active + audience on server)
+  try{
+    const url = NOTICE_API_URL + `?audience=${encodeURIComponent(selected)}`;
+    const res = await fetch(url, { cache:"no-store" });
+    if (!res.ok) throw new Error("Notice API fetch failed: " + res.status);
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error || "Notice API returned not-ok");
+    const rows = Array.isArray(j.rows) ? j.rows : [];
 
-  const iTitle = idx("Title");
-  const iMsg = idx("Message");
-  const iStart = idx("Start");
-  const iEnd = idx("End");
-  const iAud = idx("Audience");
+    const active = rows.slice(0, 6).map(r => ({
+      title: String(r.title || "").trim(),
+      msg: String(r.message || "").trim(),
+      start: r.start_at ? String(r.start_at).trim() : "",
+      end: r.end_at ? String(r.end_at).trim() : ""
+    })).filter(x => x.title || x.msg);
 
-  const items = rows.slice(1).map(r => ({
-    title: (r[iTitle] || "").trim(),
-    msg: (r[iMsg] || "").trim(),
-    start: (r[iStart] || "").trim(),
-    end: (r[iEnd] || "").trim(),
-    aud: (r[iAud] || "").trim()
-  })).filter(x => x.title || x.msg);
+    if (!active.length){
+      return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px"><li>No active notices for ${escapeHtml(selected)}</li></ul>`;
+    }
 
-  const active = items
-    .filter(n => isActiveNotice(n.start, n.end))
-    .filter(n => audienceMatches(n.aud, selected))
-    .slice(0, 6);
+    return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px">` + active.map(n =>
+      `<li><strong>${escapeHtml(n.title || "Notice")}</strong>${n.msg ? " — " + escapeHtml(n.msg) : ""}</li>`
+    ).join("") + `</ul>`;
+  } catch(e){
+    // Legacy CSV fallback (old behavior)
+    const res = await fetch(NOTICE_CSV_URL, { cache:"no-store" });
+    const csv = await res.text();
+    const rows = parseCSV(csv);
+    const headers = rows[0];
+    const idx = (n) => headers.indexOf(n);
 
-  if (!active.length){
-    return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px"><li>No active notices for ${escapeHtml(selected)}</li></ul>`;
+    const iTitle = idx("Title");
+    const iMsg = idx("Message");
+    const iStart = idx("Start");
+    const iEnd = idx("End");
+    const iAud = idx("Audience");
+
+    const items = rows.slice(1).map(r => ({
+      title: (r[iTitle] || "").trim(),
+      msg: (r[iMsg] || "").trim(),
+      start: (r[iStart] || "").trim(),
+      end: (r[iEnd] || "").trim(),
+      aud: (r[iAud] || "").trim()
+    })).filter(x => x.title || x.msg);
+
+    const active = items
+      .filter(n => isActiveNotice(n.start, n.end))
+      .filter(n => audienceMatches(n.aud, selected))
+      .slice(0, 6);
+
+    if (!active.length){
+      return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px"><li>No active notices for ${escapeHtml(selected)}</li></ul>`;
+    }
+
+    return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px">` + active.map(n =>
+      `<li><strong>${escapeHtml(n.title || "Notice")}</strong>${n.msg ? " — " + escapeHtml(n.msg) : ""}</li>`
+    ).join("") + `</ul>`;
   }
-
-  return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px">` + active.map(n =>
-    `<li><strong>${escapeHtml(n.title || "Notice")}</strong>${n.msg ? " — " + escapeHtml(n.msg) : ""}</li>`
-  ).join("") + `</ul>`;
 }
 
 async function refreshHandover(){
@@ -920,7 +776,7 @@ async function setHandover(){
 
   toast("Setting handover…", 1500);
 
-  await postToAppsScript({ action:"setHandover", message });
+  await apiPost("/handover_set.php", { message });
 
   toast("Handover set ✅", 2000);
   document.getElementById("handoverMsg").value = "";
@@ -930,7 +786,7 @@ async function setHandover(){
 async function ackHandover(){
   toast("Acknowledging…", 1500);
 
-  await postToAppsScript({ action:"ackHandover" });
+  await apiPost("/handover_ack.php", { });
 
   toast("Acknowledged ✅", 2000);
   await refreshHandover();
@@ -1321,36 +1177,60 @@ function wireAudienceCustom(){
 
 async function loadNoticesManager(showToast=true){
   try{
-    const res = await fetch(NOTICE_CSV_URL, { cache:"no-store" });
-    const csv = await res.text();
-    const rows = parseCSV(csv);
-    const headers = rows[0] || [];
-    const idx = (n) => headers.indexOf(n);
+    const scope = (document.getElementById("noticeFilter")?.value || "active") === "all" ? "all" : "active";
+    const res = await fetch(NOTICE_ADMIN_API_URL + `?scope=${encodeURIComponent(scope)}`, { cache:"no-store" });
+    if (!res.ok) throw new Error("Notice admin API fetch failed: " + res.status);
+    const j = await res.json();
+    if (!j.ok) throw new Error(j.error || "Notice admin API returned not-ok");
+    const rows = Array.isArray(j.rows) ? j.rows : [];
 
-    const iTitle = idx("Title");
-    const iMsg = idx("Message");
-    const iCat = idx("Category");
-    const iStart = idx("Start");
-    const iEnd = idx("End");
-    const iAud = idx("Audience");
-
-    noticesCache = rows.slice(1).map((r, i) => ({
-      rowNumber: i + 2,
-      title: (r[iTitle] || "").trim(),
-      msg: (r[iMsg] || "").trim(),
-      cat: (r[iCat] || "").trim(),
-      start: (r[iStart] || "").trim(),
-      end: (r[iEnd] || "").trim(),
-      aud: (r[iAud] || "").trim(),
+    noticesCache = rows.map(r => ({
+      id: r.id,
+      title: String(r.title || "").trim(),
+      msg: String(r.message || "").trim(),
+      cat: String(r.category || "").trim(),
+      start: r.start_at ? String(r.start_at).trim() : "",
+      end: r.end_at ? String(r.end_at).trim() : "",
+      aud: String(r.audience || "All").trim(),
     })).filter(x => x.title || x.msg);
 
     renderNoticesManager();
     if (showToast) toast("Notices loaded ✅", 1400);
+    return;
   } catch(e){
-    console.error(e);
-    document.getElementById("noticeList").innerHTML =
-      `<div class="text-xs font-extrabold text-muted">Could not load notices.</div>`;
-    if (showToast) toast("Could not load notices", 2400);
+    // Legacy CSV fallback
+    try{
+      const res = await fetch(NOTICE_CSV_URL, { cache:"no-store" });
+      const csv = await res.text();
+      const rows = parseCSV(csv);
+      const headers = rows[0] || [];
+      const idx = (n) => headers.indexOf(n);
+
+      const iTitle = idx("Title");
+      const iMsg = idx("Message");
+      const iCat = idx("Category");
+      const iStart = idx("Start");
+      const iEnd = idx("End");
+      const iAud = idx("Audience");
+
+      noticesCache = rows.slice(1).map((r, i) => ({
+        id: i + 2,
+        title: (r[iTitle] || "").trim(),
+        msg: (r[iMsg] || "").trim(),
+        cat: (r[iCat] || "").trim(),
+        start: (r[iStart] || "").trim(),
+        end: (r[iEnd] || "").trim(),
+        aud: (r[iAud] || "").trim(),
+      })).filter(x => x.title || x.msg);
+
+      renderNoticesManager();
+      if (showToast) toast("Notices loaded ✅", 1400);
+    } catch(err){
+      console.error(err);
+      document.getElementById("noticeList").innerHTML =
+        `<div class="text-xs font-extrabold text-muted">Could not load notices.</div>`;
+      if (showToast) toast("Could not load notices", 2400);
+    }
   }
 }
 
@@ -1391,7 +1271,7 @@ function renderNoticesManager(){
               • Audience: ${escapeHtml(aud)}
               ${n.start ? " • Start: " + escapeHtml(n.start) : ""}
               ${n.end ? " • End: " + escapeHtml(n.end) : ""}
-              • Row: ${n.rowNumber}
+              • ID: ${n.id}
             </div>
           </div>
 
@@ -1399,9 +1279,9 @@ function renderNoticesManager(){
             <span class="rounded-full px-2.5 py-1 text-[11px] font-black ${pillClassForStatus(st)}">${pill}</span>
             <div class="flex gap-2">
               <button class="rounded-xl px-3 py-2 font-black text-white bg-plan"
-                type="button" onclick="editNotice(${n.rowNumber})">Edit</button>
+                type="button" onclick="editNotice('${n.id}')">Edit</button>
               <button class="rounded-xl px-3 py-2 font-black text-white bg-bad"
-                type="button" onclick="deleteNotice(${n.rowNumber})">Delete</button>
+                type="button" onclick="deleteNotice('${n.id}')">Delete</button>
             </div>
           </div>
         </div>
@@ -1424,12 +1304,12 @@ function resetNoticeForm(){
   toast("New notice form ready", 1200);
 }
 
-function editNotice(rowNumber){
-  const n = noticesCache.find(x => x.rowNumber === rowNumber);
+function editNotice(id){
+  const n = noticesCache.find(x => String(x.id) === String(id));
   if (!n) return toast("Notice not found.", 2000);
 
-  document.getElementById("noticeRow").value = String(rowNumber);
-  document.getElementById("noticeFormTitle").textContent = `Edit notice (Row ${rowNumber})`;
+  document.getElementById("noticeRow").value = String(id);
+  document.getElementById("noticeFormTitle").textContent = `Edit notice (ID ${id})`;
 
   document.getElementById("nTitle").value = n.title || "";
   document.getElementById("nMsg").value = n.msg || "";
@@ -1453,9 +1333,9 @@ function editNotice(rowNumber){
   toast("Loaded for editing ✅", 1200);
 }
 
-/* SAVE NOTICE - CHANGED */
+/* SAVE NOTICE (DB) */
 async function saveNotice(){
-  const row = document.getElementById("noticeRow").value.trim();
+  const id = document.getElementById("noticeRow").value.trim();
   const title = document.getElementById("nTitle").value.trim();
   const msg = document.getElementById("nMsg").value.trim();
   const cat = document.getElementById("nCat").value.trim();
@@ -1465,63 +1345,56 @@ async function saveNotice(){
 
   if (!title && !msg) return toast("Add at least a Title or Message.", 2400);
 
-  const action = row ? "updateNotice" : "createNotice";
+  toast(id ? "Saving changes…" : "Creating notice…", 1500);
 
-  toast(row ? "Saving changes…" : "Creating notice…", 1500);
-
-  await postToAppsScript({
-    action,
-    rowNumber: row,
+  await apiPost("/noticeboard_save.php", {
+    id: id || null,
     title,
     message: msg,
     category: cat,
     audience: aud,
-    start,
-    end
+    start_at: start || null,
+    end_at: end || null
   });
 
   toast("Saved ✅", 1600);
   await loadNoticesManager(false);
-  if (!row) resetNoticeForm();
+  if (!id) resetNoticeForm();
 }
 
-/* DELETE NOTICE - CHANGED */
-async function deleteNotice(rowNumber){
-  if (!confirm(`Delete notice on row ${rowNumber}?`)) return;
+/* DELETE NOTICE (DB) */
+async function deleteNotice(id){
+  if (!confirm(`Delete notice ${id}?`)) return;
 
   toast("Deleting…", 1500);
 
-  await postToAppsScript({
-    action: "deleteNotice",
-    rowNumber: String(rowNumber)
-  });
+  await apiPost("/noticeboard_delete.php", { id: String(id) });
 
   toast("Deleted ✅", 1600);
   await loadNoticesManager(false);
 
-  if (document.getElementById("noticeRow").value.trim() === String(rowNumber)) {
+  if (document.getElementById("noticeRow").value.trim() === String(id)) {
     resetNoticeForm();
   }
 }
 
+
 function deleteNoticeFromForm(){
   const row = document.getElementById("noticeRow").value.trim();
   if (!row) return toast("Load a notice first (Edit).", 2000);
-  deleteNotice(parseInt(row, 10));
+  deleteNotice(row);
 }
 
 // Boot
 wireStatusButtons();
 wireAudienceCustom();
-wirePlantManagerFilter();
 loadPlant().then(() => {
   const aud = document.getElementById("audience");
   if (aud) aud.addEventListener("change", refreshHandover);
 }).catch(err => {
   console.error(err);
-  toast("Could not load sheet data", 2500);
+  toast("Could not load data", 2500);
 });
-setInterval(()=>loadPlant(), 60000);
 </script>
 </body>
 </html>
