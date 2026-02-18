@@ -470,28 +470,26 @@
  ***********************/
 const API_BASE = "/api";
 
-async function loginWithPinOrRfid(val){
+async function loginWithValue(val){
+  val = (val || "").trim();
+
+  // treat 4–8 digits as a PIN
+  const isPin = /^\d{4,8}$/.test(val);
+
+  const payload = isPin ? { pin: val } : { rfid: val };
+
   const r = await fetch('/api/auth_login.php', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ pin: val, rfid: val })
+    body: JSON.stringify(payload)
   });
+
   const j = await r.json();
   if (!j.ok) throw new Error(j.error || 'Login failed');
+
   sessionStorage.setItem('staff', JSON.stringify(j.user));
   document.getElementById('loginGate').style.display = 'none';
 }
-
-document.getElementById('loginBtn').onclick = async () => {
-  const v = document.getElementById('loginPin').value.trim();
-  try {
-    await loginWithPinOrRfid(v);
-  } catch (e) {
-    const el = document.getElementById('loginErr');
-    el.textContent = e.message;
-    el.classList.remove('hidden');
-  }
-};
 
 // RFID readers usually type the UID + Enter
 document.getElementById('loginPin').addEventListener('keydown', async (e) => {
