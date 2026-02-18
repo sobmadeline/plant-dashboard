@@ -506,6 +506,7 @@ function escapeHtml(s){
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({
     "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
   }[c]));
+}
 
 function toMysqlDatetime(inputVal){
   // Accepts datetime-local like "2026-02-18T06:54" and returns MySQL DATETIME "2026-02-18 06:54:00"
@@ -518,15 +519,29 @@ function toMysqlDatetime(inputVal){
   return s; // best effort
 }
 
+function setDefaultNoticeStartNow(){
+  const startEl = document.getElementById("nStart");
+  if (!startEl) return;
+
+  const d = new Date();
+  const pad = n => String(n).padStart(2, "0");
+  const local =
+    d.getFullYear() + "-" +
+    pad(d.getMonth() + 1) + "-" +
+    pad(d.getDate()) + "T" +
+    pad(d.getHours()) + ":" +
+    pad(d.getMinutes());
+
+  startEl.value = local; // default Start = now
+}
+
+
 function fromMysqlDatetime(mysqlVal){
   // Converts "2026-02-18 06:54:07" -> "2026-02-18T06:54" for datetime-local inputs
   const v = String(mysqlVal || "").trim();
   if (!v) return "";
   const m = v.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
   return m ? `${m[1]}T${m[2]}` : "";
-}
-
-
 }
 
 function toast(msg, ms=1800){
@@ -1327,7 +1342,7 @@ function resetNoticeForm(){
   document.getElementById("nAud").value = "All";
   document.getElementById("nAudCustom").value = "";
   document.getElementById("audCustomWrap").style.display = "none";
-  document.getElementById("nStart").value = "";
+  setDefaultNoticeStartNow();
   document.getElementById("nEnd").value = "";
   toast("New notice form ready", 1200);
 }
