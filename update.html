@@ -38,6 +38,25 @@
 </head>
 
 <body class="m-0 font-sans bg-bg text-slate-50">
+
+<div id="loginGate" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
+  <div class="bg-card border border-line rounded-2xl p-6 w-[340px]">
+    <div class="font-black text-xl mb-2">Staff Login</div>
+    <div class="text-sm text-muted mb-3">Enter PIN or tap RFID card</div>
+
+    <input id="loginPin" type="password"
+           class="w-full px-3 py-2 rounded bg-[#06181f] border border-line mb-2"
+           placeholder="PIN (or scan RFID)">
+
+    <button id="loginBtn"
+            class="w-full mt-2 py-2 rounded bg-bluex font-black">
+      Unlock
+    </button>
+
+    <div id="loginErr" class="mt-2 text-sm text-red-400 hidden"></div>
+  </div>
+</div>
+  
   <!-- Header -->
   <header class="bg-darkturq px-4 py-3.5 flex items-center gap-3">
     <div class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide">
@@ -451,6 +470,41 @@
  ***********************/
 const API_BASE = "/api";
 
+async function loginWithPinOrRfid(val){
+  const r = await fetch('/api/auth_login.php', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ pin: val, rfid: val })
+  });
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || 'Login failed');
+  sessionStorage.setItem('staff', JSON.stringify(j.user));
+  document.getElementById('loginGate').style.display = 'none';
+}
+
+document.getElementById('loginBtn').onclick = async () => {
+  const v = document.getElementById('loginPin').value.trim();
+  try {
+    await loginWithPinOrRfid(v);
+  } catch (e) {
+    const el = document.getElementById('loginErr');
+    el.textContent = e.message;
+    el.classList.remove('hidden');
+  }
+};
+
+// RFID readers usually type the UID + Enter
+document.getElementById('loginPin').addEventListener('keydown', async (e) => {
+  if (e.key === 'Enter') {
+    document.getElementById('loginBtn').click();
+  }
+});
+
+// Auto-check session on load
+fetch('/api/auth_check.php').then(r => r.json()).then(j => {
+  if (j.ok) document.getElementById('loginGate').style.display = 'none';
+});  
+  
 async function apiGet(path){
   const res = await fetch(API_BASE + path, { cache:"no-store" });
   if (!res.ok) throw new Error("GET " + path + " failed: " + res.status);
