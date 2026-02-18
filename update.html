@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="icon" type="image/x-icon" href="./images/favicon.ico">
   <title>Centre Management - BRAC Tools</title>
 
   <!-- Tailwind CDN -->
@@ -415,13 +414,11 @@
       <div class="grid grid-cols-2 gap-2.5 max-[540px]:grid-cols-1 mt-3">
         <div>
           <label class="block text-sm font-extrabold text-muted mb-1">Start (optional)</label>
-          <input id="nStart" placeholder="YYYY-MM-DD HH:MM"
-            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+          <input id="nStart" type="datetime-local" class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
         </div>
         <div>
           <label class="block text-sm font-extrabold text-muted mb-1">End (optional)</label>
-          <input id="nEnd" placeholder="YYYY-MM-DD HH:MM"
-            class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
+          <input id="nEnd" type="datetime-local" class="w-full rounded-xl border border-line bg-[#06181f] px-3 py-3 text-base placeholder:text-slate-400" />
         </div>
       </div>
 
@@ -508,6 +505,27 @@ function escapeHtml(s){
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({
     "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
   }[c]));
+
+function toMysqlDatetime(inputVal){
+  // Accepts datetime-local like "2026-02-18T06:54" and returns MySQL DATETIME "2026-02-18 06:54:00"
+  const v = String(inputVal || "").trim();
+  if (!v) return null;
+  // already mysql-ish
+  if (v.includes(" ") && v.match(/^\d{4}-\d{2}-\d{2} /)) return v.length === 16 ? (v + ":00") : v;
+  const s = v.replace("T", " ");
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(s)) return s + ":00";
+  return s; // best effort
+}
+
+function fromMysqlDatetime(mysqlVal){
+  // Converts "2026-02-18 06:54:07" -> "2026-02-18T06:54" for datetime-local inputs
+  const v = String(mysqlVal || "").trim();
+  if (!v) return "";
+  const m = v.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/);
+  return m ? `${m[1]}T${m[2]}` : "";
+}
+
+
 }
 
 function toast(msg, ms=1800){
@@ -675,31 +693,19 @@ function buildPlantSummary(){
 async function loadNoticesForHandover(){
   const selected = document.getElementById("audience").value;
 
-  // Prefer DB API (already filtered to active + audience on server)
+  // Prefer DB API; fall back to legacy CSV if needed.
+  let items = [];
   try{
-    const url = NOTICE_API_URL + `?audience=${encodeURIComponent(selected)}`;
-    const res = await fetch(url, { cache:"no-store" });
-    if (!res.ok) throw new Error("Notice API fetch failed: " + res.status);
-    const j = await res.json();
-    if (!j.ok) throw new Error(j.error || "Notice API returned not-ok");
+    const j = await apiGet("/noticeboard_admin_list.php?scope=active");
     const rows = Array.isArray(j.rows) ? j.rows : [];
-
-    const active = rows.slice(0, 6).map(r => ({
+    items = rows.map(r => ({
       title: String(r.title || "").trim(),
       msg: String(r.message || "").trim(),
       start: r.start_at ? String(r.start_at).trim() : "",
-      end: r.end_at ? String(r.end_at).trim() : ""
+      end: r.end_at ? String(r.end_at).trim() : "",
+      aud: String(r.audience || "All").trim()
     })).filter(x => x.title || x.msg);
-
-    if (!active.length){
-      return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px"><li>No active notices for ${escapeHtml(selected)}</li></ul>`;
-    }
-
-    return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px">` + active.map(n =>
-      `<li><strong>${escapeHtml(n.title || "Notice")}</strong>${n.msg ? " — " + escapeHtml(n.msg) : ""}</li>`
-    ).join("") + `</ul>`;
   } catch(e){
-    // Legacy CSV fallback (old behavior)
     const res = await fetch(NOTICE_CSV_URL, { cache:"no-store" });
     const csv = await res.text();
     const rows = parseCSV(csv);
@@ -712,47 +718,40 @@ async function loadNoticesForHandover(){
     const iEnd = idx("End");
     const iAud = idx("Audience");
 
-    const items = rows.slice(1).map(r => ({
+    items = rows.slice(1).map(r => ({
       title: (r[iTitle] || "").trim(),
       msg: (r[iMsg] || "").trim(),
       start: (r[iStart] || "").trim(),
       end: (r[iEnd] || "").trim(),
       aud: (r[iAud] || "").trim()
     })).filter(x => x.title || x.msg);
-
-    const active = items
-      .filter(n => isActiveNotice(n.start, n.end))
-      .filter(n => audienceMatches(n.aud, selected))
-      .slice(0, 6);
-
-    if (!active.length){
-      return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px"><li>No active notices for ${escapeHtml(selected)}</li></ul>`;
-    }
-
-    return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px">` + active.map(n =>
-      `<li><strong>${escapeHtml(n.title || "Notice")}</strong>${n.msg ? " — " + escapeHtml(n.msg) : ""}</li>`
-    ).join("") + `</ul>`;
   }
+
+  const active = items
+    .filter(n => isActiveNotice(n.start, n.end))
+    .filter(n => audienceMatches(n.aud, selected))
+    .slice(0, 6);
+
+  if (!active.length){
+    return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px"><li>No active notices for ${escapeHtml(selected)}</li></ul>`;
+  }
+
+  return `<ul class="text-xs font-extrabold text-muted" style="margin:8px 0 0 18px">` + active.map(n =>
+    `<li><strong>${escapeHtml(n.title || "Notice")}</strong>${n.msg ? " — " + escapeHtml(n.msg) : ""}</li>`
+  ).join("") + `</ul>`;
 }
 
 async function refreshHandover(){
+  const state = document.getElementById("handoverState");
+
   try{
-    const res = await fetch(HANDOVER_CSV_URL, { cache:"no-store" });
-    const csv = await res.text();
-    const data = parseCSV(csv);
-    const headers = data[0];
-    const row = data[1] || [];
-    const idx = (n) => headers.indexOf(n);
+    // Prefer DB API
+    const j = await apiGet("/handover_active.php");
 
-    const active = (row[idx("Active")] || "").trim().toLowerCase();
-    const msg = (row[idx("Message")] || "").trim();
-    const created = (row[idx("Created")] || "").trim();
-    const ack = (row[idx("Acknowledged")] || "").trim().toLowerCase();
-
-    const state = document.getElementById("handoverState");
-    if (active === "yes" && ack !== "yes" && msg){
+    if (j.active && j.message){
       state.classList.add("active");
-      state.innerHTML = `Active handover<div class="text-xs font-extrabold text-muted" style="margin-top:6px">${escapeHtml(msg)}<br><span style="opacity:.85">Created: ${escapeHtml(created)}</span></div>`;
+      const created = j.created_at ? String(j.created_at).trim() : "";
+      state.innerHTML = `Active handover<div class="text-xs font-extrabold text-muted" style="margin-top:6px">${escapeHtml(j.message)}${created ? `<br><span style="opacity:.85">Created: ${escapeHtml(created)}</span>` : ""}</div>`;
     } else {
       state.classList.remove("active");
       state.innerHTML = `No active handover<div class="text-xs font-extrabold text-muted" style="margin-top:6px;opacity:.9">Nothing pending for the next shift.</div>`;
@@ -760,15 +759,42 @@ async function refreshHandover(){
 
     document.getElementById("plantSummary").innerHTML = buildPlantSummary();
     document.getElementById("handoverNotices").innerHTML = await loadNoticesForHandover();
+    return;
   } catch(e){
-    console.error(e);
-    document.getElementById("handoverState").textContent = "Could not load handover.";
-    document.getElementById("plantSummary").innerHTML = "";
-    document.getElementById("handoverNotices").innerHTML = "";
+    // Fallback to legacy CSV
+    try{
+      const res = await fetch(HANDOVER_CSV_URL, { cache:"no-store" });
+      const csv = await res.text();
+      const data = parseCSV(csv);
+      const headers = data[0];
+      const row = data[1] || [];
+      const idx = (n) => headers.indexOf(n);
+
+      const active = (row[idx("Active")] || "").trim().toLowerCase();
+      const msg = (row[idx("Message")] || "").trim();
+      const created = (row[idx("Created")] || "").trim();
+      const ack = (row[idx("Acknowledged")] || "").trim().toLowerCase();
+
+      if (active === "yes" && ack !== "yes" && msg){
+        state.classList.add("active");
+        state.innerHTML = `Active handover<div class="text-xs font-extrabold text-muted" style="margin-top:6px">${escapeHtml(msg)}<br><span style="opacity:.85">Created: ${escapeHtml(created)}</span></div>`;
+      } else {
+        state.classList.remove("active");
+        state.innerHTML = `No active handover<div class="text-xs font-extrabold text-muted" style="margin-top:6px;opacity:.9">Nothing pending for the next shift.</div>`;
+      }
+
+      document.getElementById("plantSummary").innerHTML = buildPlantSummary();
+      document.getElementById("handoverNotices").innerHTML = await loadNoticesForHandover();
+    } catch(err){
+      console.error(err);
+      state.textContent = "Could not load handover.";
+      document.getElementById("plantSummary").innerHTML = "";
+      document.getElementById("handoverNotices").innerHTML = "";
+    }
   }
 }
 
-/***********************
+/************************
  * HANDOVER (WRITE) - CHANGED
  ***********************/
 async function setHandover(){
@@ -1328,8 +1354,8 @@ function editNotice(id){
     document.getElementById("nAudCustom").value = aud;
   }
 
-  document.getElementById("nStart").value = n.start || "";
-  document.getElementById("nEnd").value = n.end || "";
+  document.getElementById("nStart").value = fromMysqlDatetime(n.start);
+  document.getElementById("nEnd").value = fromMysqlDatetime(n.end);
 
   toast("Loaded for editing ✅", 1200);
 }
@@ -1341,8 +1367,8 @@ async function saveNotice(){
   const msg = document.getElementById("nMsg").value.trim();
   const cat = document.getElementById("nCat").value.trim();
   const aud = getAudienceValue();
-  const start = document.getElementById("nStart").value.trim();
-  const end = document.getElementById("nEnd").value.trim();
+  const start = toMysqlDatetime(document.getElementById("nStart").value);
+  const end = toMysqlDatetime(document.getElementById("nEnd").value);
 
   if (!title && !msg) return toast("Add at least a Title or Message.", 2400);
 
