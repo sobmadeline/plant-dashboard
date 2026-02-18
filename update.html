@@ -38,6 +38,16 @@
 </head>
 
 <body class="m-0 font-sans bg-bg text-slate-50">
+  <div id="welcomeBadge" class="fixed top-3 right-3 z-40 hidden px-3 py-2 rounded-xl border border-line bg-card shadow-lg text-sm font-bold"></div>
+
+  <div id="logoutOverlay" class="fixed inset-0 bg-black/70 z-50 hidden items-center justify-center">
+    <div class="bg-card border border-line rounded-2xl p-6 w-[360px]">
+      <div id="logoutOverlayTitle" class="font-black text-xl mb-2">Session</div>
+      <div id="logoutOverlayMsg" class="text-sm text-muted mb-4"></div>
+      <button id="logoutOverlayBtn" class="w-full py-2 rounded bg-plan font-black">OK</button>
+    </div>
+  </div>
+
 
 <div id="loginGate" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
   <div class="bg-card border border-line rounded-2xl p-6 w-[340px]">
@@ -49,7 +59,7 @@
            placeholder="PIN (or scan RFID)">
 
     <button id="loginBtn"
-            class="w-full mt-2 py-2 rounded bg-plan font-black">
+            class="w-full mt-2 py-2 rounded bg-bluex font-black">
       Unlock
     </button>
 
@@ -491,23 +501,6 @@ async function loginWithValue(val){
   document.getElementById('loginGate').style.display = 'none';
 }
 
-// Button click -> attempt login
-document.getElementById('loginBtn').onclick = async () => {
-  const v = document.getElementById('loginPin').value.trim();
-  const errEl = document.getElementById('loginErr');
-  if (errEl){ errEl.textContent = ""; errEl.classList.add("hidden"); }
-  try {
-    await loginWithValue(v);
-  } catch (e) {
-    if (errEl){
-      errEl.textContent = e.message || String(e);
-      errEl.classList.remove("hidden");
-    }
-    toast("Login failed: " + (e.message || e), 3500);
-  }
-};
-
-
 // RFID readers usually type the UID + Enter
 document.getElementById('loginPin').addEventListener('keydown', async (e) => {
   if (e.key === 'Enter') {
@@ -515,18 +508,11 @@ document.getElementById('loginPin').addEventListener('keydown', async (e) => {
   }
 });
 
-// Auto-check session on load (tolerate 404/HTML responses)
-fetch('/api/auth_check.php', { cache: 'no-store' })
-  .then(async (r) => {
-    const ct = (r.headers.get('content-type') || '').toLowerCase();
-    if (!r.ok || !ct.includes('application/json')) return null;
-    return r.json().catch(()=>null);
-  })
-  .then((j) => {
-    if (j && j.ok) document.getElementById('loginGate').style.display = 'none';
-  })
-  .catch(() => { /* ignore */ });
-
+// Auto-check session on load
+fetch('/api/auth_check.php').then(r => r.json()).then(j => {
+  if (j.ok) document.getElementById('loginGate').style.display = 'none';
+});  
+  
 async function apiGet(path){
   const res = await fetch(API_BASE + path, { cache:"no-store" });
   if (!res.ok) throw new Error("GET " + path + " failed: " + res.status);
@@ -1514,6 +1500,116 @@ loadPlant().then(() => {
   console.error(err);
   toast("Could not load data", 2500);
 });
+</script>
+<script>
+
+// --- Welcome + Auto-logout (idle-based) ---
+const IDLE_WARN_MS = 25 * 60 * 1000;   // 25 minutes
+const IDLE_LOGOUT_MS = 30 * 60 * 1000; // 30 minutes
+let idleWarnTimer = null;
+let idleLogoutTimer = null;
+
+function showOverlay(title, msg, btnText="OK", onClick=null){
+  const ov = document.getElementById('logoutOverlay');
+  const t = document.getElementById('logoutOverlayTitle');
+  const m = document.getElementById('logoutOverlayMsg');
+  const b = document.getElementById('logoutOverlayBtn');
+  if (!ov || !t || !m || !b) return;
+  t.textContent = title;
+  m.textContent = msg;
+  b.textContent = btnText;
+  ov.classList.remove('hidden');
+  ov.classList.add('flex');
+  b.onclick = () => {
+    ov.classList.add('hidden');
+    ov.classList.remove('flex');
+    if (typeof onClick === 'function') onClick();
+  };
+}
+
+async function doLogout(reasonMsg){
+  try { await fetch('/api/auth_logout.php', { method:'POST' }); } catch(e) {}
+  sessionStorage.removeItem('staff');
+  const gate = document.getElementById('loginGate');
+  if (gate) gate.style.display = 'flex';
+  showOverlay('Logged out', reasonMsg || 'You have been logged out.', 'Log in', () => {
+    const pin = document.getElementById('loginPin');
+    if (pin) { pin.value = ''; pin.focus(); }
+  });
+  const badge = document.getElementById('welcomeBadge');
+  if (badge) badge.classList.add('hidden');
+}
+
+function scheduleIdleTimers(){
+  if (idleWarnTimer) clearTimeout(idleWarnTimer);
+  if (idleLogoutTimer) clearTimeout(idleLogoutTimer);
+
+  idleWarnTimer = setTimeout(() => {
+    showOverlay('Still there?', 'You will be logged out in 5 minutes due to inactivity.', 'Stay logged in', () => bumpActivity());
+  }, IDLE_WARN_MS);
+
+  idleLogoutTimer = setTimeout(() => {
+    doLogout('Logged out after 30 minutes of inactivity.');
+  }, IDLE_LOGOUT_MS);
+}
+
+function bumpActivity(){ scheduleIdleTimers(); }
+
+['mousemove','mousedown','keydown','touchstart','scroll'].forEach(ev => {
+  window.addEventListener(ev, bumpActivity, { passive:true });
+});
+
+function setWelcome(user){
+  const badge = document.getElementById('welcomeBadge');
+  if (!badge) return;
+  if (user && user.name){
+    badge.textContent = `Welcome ${user.name}!`;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+async function refreshWelcomeFromServer(){
+  try {
+    const r = await fetch('/api/auth_check.php', { cache:'no-store' });
+    const ct = (r.headers.get('content-type')||'').toLowerCase();
+    if (!r.ok || !ct.includes('application/json')) return null;
+    const j = await r.json().catch(()=>null);
+    if (j && j.ok && j.user){
+      sessionStorage.setItem('staff', JSON.stringify(j.user));
+      setWelcome(j.user);
+      return j.user;
+    }
+  } catch(e) {}
+  return null;
+}
+
+// Hook login success (if loginWithValue exists)
+const _origLoginWithValue = window.loginWithValue;
+if (typeof _origLoginWithValue === 'function'){
+  window.loginWithValue = async function(val){
+    const res = await _origLoginWithValue(val);
+    const saved = sessionStorage.getItem('staff');
+    if (saved){
+      try { setWelcome(JSON.parse(saved)); } catch(e){}
+    } else {
+      await refreshWelcomeFromServer();
+    }
+    bumpActivity();
+    return res;
+  };
+}
+
+// On load: if already logged in, show welcome + start timers
+(function(){
+  const saved = sessionStorage.getItem('staff');
+  if (saved){
+    try { setWelcome(JSON.parse(saved)); } catch(e){}
+  }
+  refreshWelcomeFromServer().then(u => { if (u) bumpActivity(); });
+})();
+
 </script>
 </body>
 </html>
