@@ -59,7 +59,7 @@
            placeholder="PIN (or scan RFID)">
 
     <button id="loginBtn"
-            class="w-full mt-2 py-2 rounded bg-bluex font-black">
+            class="w-full mt-2 py-2 rounded bg-plan font-black">
       Unlock
     </button>
 
@@ -488,37 +488,75 @@ wireAudienceCustom();
 
 async function loginWithValue(val){
   val = (val || "").trim();
+  const errEl = document.getElementById('loginErr');
 
-  // treat 4–8 digits as a PIN
+  // treat 4–8 digits as PIN, otherwise RFID UID
   const isPin = /^\d{4,8}$/.test(val);
-
   const payload = isPin ? { pin: val } : { rfid: val };
 
   const r = await fetch('/api/auth_login.php', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    credentials: 'same-origin'
   });
 
-  const j = await r.json();
-  if (!j.ok) throw new Error(j.error || 'Login failed');
+  const ct = (r.headers.get('content-type') || '').toLowerCase();
+  const j = ct.includes('application/json') ? await r.json().catch(()=>null) : null;
+
+  if (!r.ok || !j || !j.ok){
+    const msg = (j && j.error) ? j.error : `Login failed (HTTP ${r.status})`;
+    if (errEl){ errEl.textContent = msg; errEl.classList.remove('hidden'); }
+    throw new Error(msg);
+  }
 
   sessionStorage.setItem('staff', JSON.stringify(j.user));
-  document.getElementById('loginGate').style.display = 'none';
+  const gate = document.getElementById('loginGate');
+  if (gate) gate.style.display = 'none';
+
+  // welcome badge if present
+  const badge = document.getElementById('welcomeBadge');
+  if (badge && j.user && j.user.name){
+    badge.textContent = `Welcome ${j.user.name}!`;
+    badge.classList.remove('hidden');
+  }
+
+  return j.user;
 }
 
-// RFID readers usually type the UID + Enter
-document.getElementById('loginPin').addEventListener('keydown', async (e) => {
-  if (e.key === 'Enter') {
-    document.getElementById('loginBtn').click();
-  }
+// Unlock button -> attempt login
+document.getElementById('loginBtn').onclick = async () => {
+  const v = document.getElementById('loginPin').value.trim();
+  const errEl = document.getElementById('loginErr');
+  if (errEl){ errEl.textContent = ''; errEl.classList.add('hidden'); }
+  try { await loginWithValue(v); } catch(e) { /* error shown */ }
+};
+
+// RFID readers usually type UID + Enter
+document.getElementById('loginPin').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('loginBtn').click();
 });
 
-// Auto-check session on load
-fetch('/api/auth_check.php').then(r => r.json()).then(j => {
-  if (j.ok) document.getElementById('loginGate').style.display = 'none';
-});  
-  
+// Auto-check session on load (tolerate 401/HTML so we don't crash)
+fetch('/api/auth_check.php', { cache:'no-store', credentials:'same-origin' })
+  .then(async (r) => {
+    const ct = (r.headers.get('content-type') || '').toLowerCase();
+    if (!r.ok || !ct.includes('application/json')) return null;
+    return r.json().catch(()=>null);
+  })
+  .then((j) => {
+    if (j && j.ok){
+      sessionStorage.setItem('staff', JSON.stringify(j.user));
+      const gate = document.getElementById('loginGate');
+      if (gate) gate.style.display = 'none';
+      const badge = document.getElementById('welcomeBadge');
+      if (badge && j.user && j.user.name){
+        badge.textContent = `Welcome ${j.user.name}!`;
+        badge.classList.remove('hidden');
+      }
+    }
+  })
+  .catch(()=>{});
 async function apiGet(path){
   const res = await fetch(API_BASE + path, { cache:"no-store" });
   if (!res.ok) throw new Error("GET " + path + " failed: " + res.status);
