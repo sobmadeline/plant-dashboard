@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/auth_check.php';
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/audit.php';
 header('Content-Type: application/json; charset=utf-8');
 
 function fail($msg, $code=400){
@@ -24,6 +25,19 @@ if (!$data) $data = $_POST;
 
 $component_id = isset($data['component_id']) ? trim((string)$data['component_id']) : '';
 if ($component_id === '') fail('component_id is required');
+
+// --- Audit: capture before snapshot ---
+$before = null;
+$before_id = null;
+try {
+  $s = db()->prepare("SELECT * FROM plant_status WHERE component_id = :cid LIMIT 1");
+  $s->execute([':cid' => $component_id]);
+  $before = $s->fetch(PDO::FETCH_ASSOC) ?: null;
+  if ($before && isset($before['id'])) $before_id = (int)$before['id'];
+} catch (Throwable $e) {
+  // ignore snapshot failures
+}
+
 
 $allowedStatus = ['Operational','Degraded','Offline','Planned Maintenance'];
 
@@ -72,6 +86,21 @@ $sql = "UPDATE plant_status SET " . implode(", ", $set) . " WHERE component_id =
 try {
   $stmt = db()->prepare($sql);
   $stmt->execute($params);
+
+  // --- Audit: capture after snapshot and log ---
+  $after = null;
+  try {
+    $s2 = db()->prepare("SELECT * FROM plant_status WHERE component_id = :cid LIMIT 1");
+    $s2->execute([':cid' => $component_id]);
+    $after = $s2->fetch(PDO::FETCH_ASSOC) ?: null;
+  } catch (Throwable $e) {
+    // ignore snapshot failures
+  }
+
+  // Log only if an actual row was affected or we can see a before/after row
+  if (($stmt->rowCount() > 0) || $before || $after) {
+    audit_log('update', 'plant_status', $before_id, $before, $after);
+  }
 
   echo json_encode([
     'ok' => true,
