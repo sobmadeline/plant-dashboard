@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>BRAC Tools - Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+
+  <div class="max-w-md mx-auto p-6">
+    <div class="mt-14 bg-white border rounded-2xl shadow-sm p-6">
+      <div class="flex items-center gap-3">
+        <a href="index" class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide"> 
+            <img src="./images/ColourWebsiteLogo.png" alt="BRAC Logo" class="object-contain" /> 
+        </a>
+        <div>
+          <h1 class="text-2xl font-extrabold tracking-tight">Sign in</h1>
+          <p class="text-sm text-slate-600">BRAC Tools</p>
+        </div>
+      </div>
+
+      <div id="toast" class="hidden mt-4 bg-slate-900 text-white px-4 py-3 rounded-xl"></div>
+
+      <div class="mt-5 grid gap-4">
+        <label class="block">
+          <span class="text-xs font-semibold text-slate-700">PIN</span>
+          <input id="pin" type="password" inputmode="numeric"
+                 class="mt-1 w-full rounded-xl border p-3"
+                 placeholder="Enter PIN"/>
+        </label>
+
+        <div class="text-center text-xs text-slate-500 font-semibold">or</div>
+
+        <label class="block">
+          <span class="text-xs font-semibold text-slate-700">RFID</span>
+          <input id="rfid" autocomplete="off"
+                 class="mt-1 w-full rounded-xl border p-3"
+                 placeholder="Scan RFID tag"/>
+          <div class="text-xs text-slate-500 mt-1">Tip: click into the RFID field before scanning.</div>
+        </label>
+
+        <button id="btn"
+                class="mt-1 w-full px-4 py-3 rounded-2xl bg-emerald-600 text-white font-extrabold hover:opacity-90">
+          Login
+        </button>
+
+        <div id="err" class="hidden text-sm text-red-800 bg-red-50 border border-red-200 rounded-xl p-3"></div>
+      </div>
+    </div>
+
+    <div class="mt-4 text-center text-xs text-slate-500">
+      Need help? Contact your supervisor / manager.
+    </div>
+  </div>
+
+<script>
+  function qs(sel){ return document.querySelector(sel); }
+  function toast(msg){
+    const t = qs('#toast');
+    t.textContent = msg;
+    t.classList.remove('hidden');
+    clearTimeout(window.__t);
+    window.__t = setTimeout(()=>t.classList.add('hidden'), 2500);
+  }
+
+  function nextUrl(){
+    const u = new URL(location.href);
+    const next = u.searchParams.get('next');
+    return next || '/centremanager.html';
+  }
+
+  async function login(){
+    const pin = qs('#pin').value.trim();
+    const rfid = qs('#rfid').value.trim();
+    const err = qs('#err');
+    err.classList.add('hidden');
+    err.textContent = '';
+
+    if (!pin && !rfid){
+      err.textContent = 'Enter a PIN or scan an RFID tag.';
+      err.classList.remove('hidden');
+      return;
+    }
+
+    qs('#btn').disabled = true;
+    qs('#btn').textContent = 'Signing in…';
+
+    try{
+      const res = await fetch('/api/auth_login.php', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ pin, rfid })
+      });
+
+      if (!res.ok){
+        // Try to get a helpful message
+        let msg = 'Login failed.';
+        try {
+          const j = await res.json();
+          msg = j.error || j.message || msg;
+        } catch {}
+        throw new Error(msg);
+      }
+
+      // success
+      toast('Logged in');
+      location.href = nextUrl();
+    } catch(e){
+      err.textContent = e.message;
+      err.classList.remove('hidden');
+      qs('#btn').disabled = false;
+      qs('#btn').textContent = 'Login';
+    }
+  }
+
+  qs('#btn').addEventListener('click', login);
+  qs('#pin').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); login(); } });
+  qs('#rfid').addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); login(); } });
+
+  // Autofocus RFID field for scanners (nice for front desk)
+  qs('#rfid').focus();
+</script>
+</body>
+</html>
