@@ -9,7 +9,7 @@
 <script>
 (async function guard(){
   try{
-    const res = await fetch('/liquorincidents/api/whoami.php', { cache: 'no-store' });
+    const res = await fetch('/api/whoami.php', { cache: 'no-store', credentials: 'same-origin' });
     if (!res.ok) throw new Error('not logged in');
   } catch(e){
     const next = encodeURIComponent(location.pathname + location.search + location.hash);
