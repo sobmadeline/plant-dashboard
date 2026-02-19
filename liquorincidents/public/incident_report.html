@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Log Incident</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div id="toast" class="hidden fixed top-4 right-4 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg z-50"></div>
+<div class="max-w-6xl mx-auto p-4 md:p-8">
+  <div class="flex items-center justify-between gap-3 mb-6">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Log Incident</h1>
+      <p class="text-sm text-slate-600">BRAC Tools • Incident reporting and registers (WA)</p>
+    </div>
+    <div class="flex gap-2">
+      <a class="px-3 py-2 rounded-xl bg-white border shadow-sm hover:bg-slate-100" href="./incident_report.html">Log Incident</a>
+      <a class="px-3 py-2 rounded-xl bg-white border shadow-sm hover:bg-slate-100" href="./refusal_report.html">Log Refusal</a>
+      <a class="px-3 py-2 rounded-xl bg-white border shadow-sm hover:bg-slate-100" href="./incident_register.html">Registers</a>
+      <a class="px-3 py-2 rounded-xl bg-white border shadow-sm hover:bg-slate-100" href="./monthly_report.html">Monthly</a>
+    </div>
+  </div>
+
+<div class="bg-white border rounded-2xl shadow-sm p-4 md:p-6">
+  <div class="grid md:grid-cols-3 gap-4">
+    <label class="block">
+      <span class="text-sm font-semibold">Date</span>
+      <input id="incident_date" type="date" class="mt-1 w-full rounded-xl border p-2" />
+    </label>
+    <label class="block">
+      <span class="text-sm font-semibold">Time</span>
+      <input id="incident_time" type="time" class="mt-1 w-full rounded-xl border p-2" />
+    </label>
+    <label class="block">
+      <span class="text-sm font-semibold">Location</span>
+      <input id="location" placeholder="e.g. entry, tennis courts, carpark" class="mt-1 w-full rounded-xl border p-2" />
+    </label>
+  </div>
+
+  <div class="grid md:grid-cols-3 gap-4 mt-4">
+    <label class="block">
+      <span class="text-sm font-semibold">CCTV at location?</span>
+      <select id="cctv_available" class="mt-1 w-full rounded-xl border p-2">
+        <option value="">Unknown</option>
+        <option value="1">Yes</option>
+        <option value="0">No</option>
+      </select>
+    </label>
+    <label class="block">
+      <span class="text-sm font-semibold">Approved Manager on duty</span>
+      <input id="approved_manager_name" placeholder="Auto-fill from login if blank" class="mt-1 w-full rounded-xl border p-2" />
+    </label>
+    <label class="block">
+      <span class="text-sm font-semibold">Reporting person (if different)</span>
+      <input id="reporting_person_name" placeholder="Auto-fill from login if blank" class="mt-1 w-full rounded-xl border p-2" />
+    </label>
+  </div>
+
+  <div class="mt-5">
+    <span class="text-sm font-semibold">Incident type</span>
+    <select id="incident_type" class="mt-1 w-full rounded-xl border p-2">
+      <option value="">Select…</option>
+      <option>Person - required to leave or be removed</option>
+      <option>Juvenile or suspected juvenile – no ID</option>
+      <option>Juvenile or suspected juvenile – forged / false / counterfeit ID</option>
+      <option>Person – behaved in an offensive manner</option>
+      <option>Person - drunk</option>
+      <option>Person (including Staff) - injured</option>
+      <option>Complaint – noise</option>
+      <option>Complaint – other</option>
+      <option>Banned Drinkers Register – inoperable or unable to be used</option>
+    </select>
+  </div>
+
+  <div class="grid md:grid-cols-3 gap-4 mt-5">
+    <label class="inline-flex items-center gap-2 bg-slate-50 border rounded-xl p-3">
+      <input id="police_notified" type="checkbox" class="h-5 w-5">
+      <span class="font-semibold">WA Police notified</span>
+    </label>
+    <label class="inline-flex items-center gap-2 bg-slate-50 border rounded-xl p-3">
+      <input id="physical_force" type="checkbox" class="h-5 w-5">
+      <span class="font-semibold">Physical force used</span>
+    </label>
+    <div class="bg-slate-50 border rounded-xl p-3">
+      <div class="text-sm font-semibold mb-2">Other authorities notified</div>
+      <label class="flex items-center gap-2"><input type="checkbox" class="auth h-4 w-4" value="Emergency Services"> Emergency Services</label>
+      <label class="flex items-center gap-2"><input type="checkbox" class="auth h-4 w-4" value="DMIRS"> DMIRS</label>
+      <label class="flex items-center gap-2"><input type="checkbox" class="auth h-4 w-4" value="Other"> Other</label>
+    </div>
+  </div>
+
+  <div class="mt-5">
+    <span class="text-sm font-semibold">Details of incident</span>
+    <textarea id="incident_details" rows="5" class="mt-1 w-full rounded-xl border p-2" placeholder="What happened? Include relevant details."></textarea>
+  </div>
+
+  <div class="mt-5">
+    <span class="text-sm font-semibold">Actions taken</span>
+    <textarea id="actions_taken" rows="4" class="mt-1 w-full rounded-xl border p-2" placeholder="What actions were taken? (e.g. refused entry, removed, first aid, called police)"></textarea>
+  </div>
+
+  <div class="mt-6 bg-slate-50 border rounded-2xl p-4">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <div class="font-extrabold">Link staff involved</div>
+        <div class="text-sm text-slate-600">Search and add employees / crowd controllers to the incident.</div>
+      </div>
+      <div class="flex gap-2 items-center">
+        <input id="staff_search" class="rounded-xl border p-2" placeholder="Search staff name…" />
+        <button id="staff_go" class="px-3 py-2 rounded-xl bg-slate-900 text-white hover:opacity-90">Search</button>
+      </div>
+    </div>
+    <div id="staff_results" class="mt-3 grid md:grid-cols-2 gap-2"></div>
+    <div class="mt-4">
+      <div class="font-semibold">Selected staff</div>
+      <div id="staff_selected" class="mt-2 flex flex-wrap gap-2"></div>
+    </div>
+  </div>
+
+  <div class="mt-6 flex items-center justify-end gap-3">
+    <button id="submit" class="px-5 py-3 rounded-2xl bg-emerald-600 text-white font-extrabold hover:opacity-90">Submit Incident</button>
+  </div>
+</div>
+
+<script>
+(function initDefaults(){
+  const d = new Date();
+  const pad = n=>String(n).padStart(2,'0');
+  qs('#incident_date').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  qs('#incident_time').value = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+})();
+
+let selectedStaff = new Map();
+
+function renderSelected(){
+  const wrap = qs('#staff_selected');
+  wrap.innerHTML = '';
+  for (const [id, u] of selectedStaff.entries()){
+    const el = document.createElement('button');
+    el.className = 'px-3 py-2 rounded-xl bg-white border shadow-sm hover:bg-slate-100';
+    el.textContent = `${u.display_name} ✕`;
+    el.onclick = ()=>{ selectedStaff.delete(id); renderSelected(); };
+    wrap.appendChild(el);
+  }
+}
+
+async function staffSearch(){
+  const q = qs('#staff_search').value.trim();
+  const j = await api(`./api/users_list.php?q=${encodeURIComponent(q)}`);
+  const out = qs('#staff_results');
+  out.innerHTML = '';
+  j.items.forEach(u=>{
+    const b = document.createElement('button');
+    b.className = 'text-left px-3 py-3 rounded-xl bg-white border hover:bg-slate-100';
+    b.innerHTML = `<div class="font-bold">${u.display_name}</div><div class="text-xs text-slate-600">${u.role}</div>`;
+    b.onclick = ()=>{ selectedStaff.set(String(u.id), u); renderSelected(); toast('Added'); };
+    out.appendChild(b);
+  });
+}
+qs('#staff_go').onclick = ()=>staffSearch();
+qs('#staff_search').addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); staffSearch(); }});
+
+qs('#submit').onclick = async ()=>{
+  try{
+    const authorities = qsa('.auth').filter(x=>x.checked).map(x=>x.value);
+    const payload = {
+      incident_date: qs('#incident_date').value,
+      incident_time: qs('#incident_time').value,
+      location: qs('#location').value.trim(),
+      cctv_available: qs('#cctv_available').value === '' ? null : Number(qs('#cctv_available').value),
+      approved_manager_name: qs('#approved_manager_name').value.trim(),
+      reporting_person_name: qs('#reporting_person_name').value.trim(),
+      incident_type: qs('#incident_type').value,
+      police_notified: qs('#police_notified').checked ? 1 : 0,
+      physical_force: qs('#physical_force').checked ? 1 : 0,
+      authorities_notified: authorities,
+      incident_details: qs('#incident_details').value,
+      actions_taken: qs('#actions_taken').value,
+      staff_ids: [...selectedStaff.keys()].map(x=>Number(x)),
+    };
+    const j = await api('./api/incidents_create.php', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload),
+    });
+    toast(`Saved ${j.incident_no}`);
+    setTimeout(()=>location.href = `./incident_register.html#incident=${j.id}`, 500);
+  } catch (e){
+    toast(e.message);
+  }
+};
+</script>
+
+</div>
+
+<script>
+async function api(url, opts={}) {
+  const res = await fetch(url, opts);
+  const ct = res.headers.get('content-type') || '';
+  if (!res.ok) {
+    let msg = res.status + ' ' + res.statusText;
+    try {
+      if (ct.includes('application/json')) {
+        const j = await res.json();
+        msg = j.error || msg;
+      } else msg = await res.text();
+    } catch (e) {}
+    throw new Error(msg);
+  }
+  if (ct.includes('application/json')) return await res.json();
+  return await res.text();
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(window.__t_to);
+  window.__t_to = setTimeout(()=>t.classList.add('hidden'), 2600);
+}
+function qs(sel){ return document.querySelector(sel); }
+function qsa(sel){ return [...document.querySelectorAll(sel)]; }
+</script>
+
+</body>
+</html>

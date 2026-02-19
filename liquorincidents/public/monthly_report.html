@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Monthly Compliance Report</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-900">
+<div id="toast" class="hidden fixed top-4 right-4 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg z-50"></div>
+<div class="max-w-6xl mx-auto p-4 md:p-8">
+  <div class="flex items-center justify-between gap-3 mb-6">
+    <div>
+      <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Monthly Compliance Report</h1>
+      <p class="text-sm text-slate-600">BRAC Tools • Incident reporting and registers (WA)</p>
+    </div>
+    <div class="flex gap-2">
+      <a class="px-3 py-2 rounded-xl bg-white border shadow-sm hover:bg-slate-100" href="./incident_report.html">Log Incident</a>
+      <a class="px-3 py-2 rounded-xl bg-white border shadow-sm hover:bg-slate-100" href="./refusal_report.html">Log Refusal</a>
+      <a class="px-3 py-2 rounded-xl bg-white border shadow-sm hover:bg-slate-100" href="./incident_register.html">Registers</a>
+      <a class="px-3 py-2 rounded-xl bg-white border shadow-sm hover:bg-slate-100" href="./monthly_report.html">Monthly</a>
+    </div>
+  </div>
+
+<div class="bg-white border rounded-2xl shadow-sm p-4 md:p-6">
+  <div class="flex flex-wrap gap-3 items-end justify-between">
+    <label class="block">
+      <span class="text-xs font-semibold text-slate-700">Month</span>
+      <input id="month" type="month" class="mt-1 rounded-xl border p-2">
+    </label>
+    <div class="flex gap-2">
+      <button id="run" class="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold hover:opacity-90">Run</button>
+      <button id="csv" class="px-4 py-2 rounded-xl bg-white border font-bold hover:bg-slate-100">Download CSV</button>
+    </div>
+  </div>
+
+  <div id="out" class="mt-5 grid gap-4"></div>
+</div>
+
+<script>
+(function init(){
+  const d = new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  qs('#month').value = `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+})();
+
+let lastReport = null;
+
+function card(title, inner){
+  return `<div class="border rounded-2xl p-4 bg-slate-50">
+    <div class="font-extrabold text-lg mb-2">${title}</div>
+    ${inner}
+  </div>`;
+}
+function table(headers, rows){
+  const th = headers.map(h=>`<th class="text-left text-xs font-extrabold p-3 bg-white border-b">${h}</th>`).join('');
+  const trs = rows.join('');
+  return `<div class="overflow-auto border rounded-2xl bg-white"><table class="min-w-full text-sm"><thead><tr>${th}</tr></thead><tbody>${trs}</tbody></table></div>`;
+}
+
+qs('#run').onclick = async ()=>{
+  try{
+    const m = qs('#month').value;
+    const j = await api(`./api/report_monthly.php?month=${encodeURIComponent(m)}`);
+    lastReport = j;
+    const incRows = (j.incidents||[]).map(r=>`
+      <tr>
+        <td class="p-3 border-b font-bold">${r.incident_type}</td>
+        <td class="p-3 border-b">${r.cnt}</td>
+        <td class="p-3 border-b">${r.police_cnt}</td>
+        <td class="p-3 border-b">${r.force_cnt}</td>
+      </tr>
+    `);
+    const refRows = (j.refusals||[]).map(r=>`
+      <tr>
+        <td class="p-3 border-b font-bold">${r.reason}</td>
+        <td class="p-3 border-b">${r.cnt}</td>
+        <td class="p-3 border-b">${r.police_cnt}</td>
+      </tr>
+    `);
+
+    qs('#out').innerHTML = `
+      ${card('Summary', `<div class="text-sm text-slate-700">Range: <span class="font-bold">${j.range.from}</span> to <span class="font-bold">${j.range.to}</span></div>`)}
+      ${card('Incidents', table(['Type','Count','Police','Force'], incRows.length?incRows:[`<tr><td class="p-3">No incidents.</td></tr>`]))}
+      ${card('Refusals', table(['Reason','Count','Police'], refRows.length?refRows:[`<tr><td class="p-3">No refusals.</td></tr>`]))}
+    `;
+    toast('Report generated');
+  } catch(e){ toast(e.message); }
+};
+
+qs('#csv').onclick = ()=>{
+  if (!lastReport) { toast('Run the report first'); return; }
+  const rows = [];
+  rows.push(['Section','Key','Count','Police','Force'].join(','));
+  (lastReport.incidents||[]).forEach(r=>rows.push(['Incidents', `"${String(r.incident_type).replaceAll('"','""')}"`, r.cnt, r.police_cnt, r.force_cnt].join(',')));
+  (lastReport.refusals||[]).forEach(r=>rows.push(['Refusals', `"${String(r.reason).replaceAll('"','""')}"`, r.cnt, r.police_cnt, ''].join(',')));
+  const blob = new Blob([rows.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `monthly_compliance_${lastReport.month}.csv`;
+  a.click();
+};
+</script>
+
+</div>
+
+<script>
+async function api(url, opts={}) {
+  const res = await fetch(url, opts);
+  const ct = res.headers.get('content-type') || '';
+  if (!res.ok) {
+    let msg = res.status + ' ' + res.statusText;
+    try {
+      if (ct.includes('application/json')) {
+        const j = await res.json();
+        msg = j.error || msg;
+      } else msg = await res.text();
+    } catch (e) {}
+    throw new Error(msg);
+  }
+  if (ct.includes('application/json')) return await res.json();
+  return await res.text();
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(window.__t_to);
+  window.__t_to = setTimeout(()=>t.classList.add('hidden'), 2600);
+}
+function qs(sel){ return document.querySelector(sel); }
+function qsa(sel){ return [...document.querySelectorAll(sel)]; }
+</script>
+
+</body>
+</html>
