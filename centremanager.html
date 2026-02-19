@@ -61,21 +61,28 @@
 
   
   <!-- Header -->
-  <header class="bg-darkturq px-4 py-3.5 flex items-center gap-3">
-   <a href="index" class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide">
-     <img src="./images/WhiteWebsiteLogo.png" alt="BRAC Logo" class="object-contain" />
-   </a>
-    <div>
-      <div class="text-[18px] font-black leading-tight">Centre Manager</div>
-      <div class="text-[13px] opacity-85 mt-0.5">Broome Recreation and Aquatic Centre</div>
-    </div>
-    <div class="flex items-center gap-3">
-      <span id="whoami" class="text-white/90 text-sm font-semibold"></span>
-      <button id="logoutBtn"
-        class="px-4 py-2 rounded-xl bg-white/90 text-slate-900 font-bold hover:bg-white">
-        Logout
-      </button>
-    </div>
+      <header class="bg-darkturq px-4 py-3.5 flex items-center justify-between gap-3">
+        <!-- Left: Logo + Titles -->
+        <div class="flex items-center gap-3 min-w-0">
+          <a href="index" class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide">
+            <img src="./images/WhiteWebsiteLogo.png" alt="BRAC Logo" class="object-contain max-h-10" />
+          </a>
+          <div class="min-w-0">
+            <div class="text-[18px] font-black leading-tight truncate">Centre Manager</div>
+            <div class="text-[13px] opacity-85 mt-0.5 truncate">Broome Recreation and Aquatic Centre</div>
+          </div>
+        </div>
+
+        <!-- Right: User + Logout -->
+        <div class="flex items-center gap-3">
+          <span id="whoami" class="text-white/90 text-sm font-semibold"></span>
+          <button id="logoutBtn"
+            class="px-4 py-2 rounded-xl bg-white/90 text-slate-900 font-bold hover:bg-white transition">
+            Logout
+          </button>
+        </div>
+      </header>
+
 
       <script>
       document.getElementById('logoutBtn')?.addEventListener('click', async () => {
@@ -102,8 +109,6 @@
         location.href = '/login.html';
       });
       </script>
-
-  </header>
 
   <!-- Tabs -->
   <div class="flex gap-2.5 px-3.5 py-2.5 bg-[#06181f]">
