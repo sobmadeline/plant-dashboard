@@ -41,44 +41,6 @@
   }
 })();
 </script>
-
-
-  <!-- Tiny shim to preserve your existing JS class toggles -->
-  <style>
-    .tab.active{ border-color:#C54B00 !important; box-shadow:0 0 0 2px rgba(197,75,0,.35) !important; }
-    .btn.selected{ outline:3px solid #f8fafc; box-shadow:0 0 0 3px rgba(197,75,0,.55); }
-  </style>
-</head>
-
-<body class="m-0 font-sans bg-bg text-slate-50">
-  <div id="welcomeBadge" class="fixed top-3 right-3 z-40 hidden px-3 py-2 rounded-xl border border-line bg-card shadow-lg text-sm font-bold"></div>
-
-  <div id="logoutOverlay" class="fixed inset-0 bg-black/70 z-50 hidden items-center justify-center">
-    <div class="bg-card border border-line rounded-2xl p-6 w-[360px]">
-      <div id="logoutOverlayTitle" class="font-black text-xl mb-2">Session</div>
-      <div id="logoutOverlayMsg" class="text-sm text-muted mb-4"></div>
-      <button id="logoutOverlayBtn" class="w-full py-2 rounded bg-plan font-black">OK</button>
-    </div>
-  </div>
-
-
-<div id="loginGate" class="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
-  <div class="bg-card border border-line rounded-2xl p-6 w-[340px]">
-    <div class="font-black text-xl mb-2">Staff Login</div>
-    <div class="text-sm text-muted mb-3">Enter PIN or tap RFID card</div>
-
-    <input id="loginPin" type="password"
-           class="w-full px-3 py-2 rounded bg-[#06181f] border border-line mb-2"
-           placeholder="PIN (or scan RFID)">
-
-    <button id="loginBtn"
-            class="w-full mt-2 py-2 rounded bg-plan font-black">
-      Unlock
-    </button>
-
-    <div id="loginErr" class="mt-2 text-sm text-red-400 hidden"></div>
-  </div>
-</div>
   
   <!-- Header -->
   <header class="bg-darkturq px-4 py-3.5 flex items-center gap-3">
@@ -89,10 +51,13 @@
       <div class="text-[18px] font-black leading-tight">Centre Manager</div>
       <div class="text-[13px] opacity-85 mt-0.5">Broome Recreation and Aquatic Centre</div>
     </div>
+    <div class="flex items-center gap-3">
+     <span id="whoami" class="text-white/90 text-sm font-semibold"></span>
       <button id="logoutBtn"
-        class="px-3 py-2 rounded-xl bg-slate-900 text-white font-bold hover:opacity-90">
+        class="px-4 py-2 rounded-xl bg-white/90 text-slate-900 font-bold hover:bg-white">
         Logout
       </button>
+    </div>
 
       <script>
       document.getElementById('logoutBtn')?.addEventListener('click', async () => {
