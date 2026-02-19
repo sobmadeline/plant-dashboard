@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Incident & Refusal Registers</title>
 <script src="https://cdn.tailwindcss.com"></script>
+
+<script>
+(async function guard(){
+  try{
+    const res = await fetch('/liquorincidents/api/whoami.php', { cache: 'no-store' });
+    if (!res.ok) throw new Error('not logged in');
+  } catch(e){
+    const next = encodeURIComponent(location.pathname + location.search + location.hash);
+    location.href = `/login.html?next=${next}`;
+  }
+})();
+</script>
+
 </head>
 <body class="bg-slate-50 text-slate-900">
 <div id="toast" class="hidden fixed top-4 right-4 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg z-50"></div>
@@ -20,6 +33,19 @@
       <a class="px-3 py-2 rounded-xl bg-white border shadow-sm hover:bg-slate-100" href="./incident_register.html">Registers</a>
       <a class="px-3 py-2 rounded-xl bg-white border shadow-sm hover:bg-slate-100" href="./monthly_report.html">Monthly</a>
     </div>
+    <button id="logoutBtn"
+      class="px-3 py-2 rounded-xl bg-slate-900 text-white font-bold hover:opacity-90">
+      Logout
+    </button>
+
+    <script>
+    document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+      try {
+        await fetch('/api/logout.php', { method: 'POST' });
+      } catch {}
+      location.href = '/login.html';
+    });
+    </script>
   </div>
 
 <div class="bg-white border rounded-2xl shadow-sm p-4 md:p-6">

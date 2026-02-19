@@ -30,6 +30,18 @@
     }
   </script>
 
+  <script>
+    (async function guard(){
+    try{
+      const res = await fetch('/liquorincidents/api/whoami.php', { cache: 'no-store' });
+      if (!res.ok) throw new Error('not logged in');
+    } catch(e){
+      const next = encodeURIComponent(location.pathname + location.search + location.hash);
+      location.href = `/login.html?next=${next}`;
+    }
+    })();
+  </script>
+
   <!-- Tiny shim to preserve your existing JS class toggles -->
   <style>
     .tab.active{ border-color:#C54B00 !important; box-shadow:0 0 0 2px rgba(197,75,0,.35) !important; }
@@ -76,6 +88,19 @@
       <div class="text-[18px] font-black leading-tight">Centre Manager</div>
       <div class="text-[13px] opacity-85 mt-0.5">Broome Recreation and Aquatic Centre</div>
     </div>
+      <button id="logoutBtn"
+        class="px-3 py-2 rounded-xl bg-slate-900 text-white font-bold hover:opacity-90">
+        Logout
+      </button>
+
+      <script>
+      document.getElementById('logoutBtn')?.addEventListener('click', async () => {
+        try {
+          await fetch('/api/logout.php', { method: 'POST' });
+        } catch {}
+        location.href = '/login.html';
+      });
+      </script>
   </header>
 
   <!-- Tabs -->
