@@ -49,8 +49,14 @@
   </style>
 </head>
 
-<body class="m-0 font-sans bg-bg text-slate-50">
-  <div id="welcomeBadge" class="fixed top-3 right-3 z-40 hidden px-3 py-2 rounded-xl border border-line bg-card shadow-lg text-sm font-bold"></div>
+  <body class="m-0 font-sans bg-bg text-slate-50">
+  <div class="flex items-center gap-3">
+      <span id="whoami" class="text-white/90 text-sm font-semibold"></span>
+      <button id="logoutBtn"
+        class="px-4 py-2 rounded-xl bg-white/90 text-slate-900 font-bold hover:bg-white">
+        Logout
+      </button>
+    </div>
 
   <div id="logoutOverlay" class="fixed inset-0 bg-black/70 z-50 hidden items-center justify-center">
     <div class="bg-card border border-line rounded-2xl p-6 w-[360px]">
@@ -70,13 +76,6 @@
       <div class="text-[18px] font-black leading-tight">Centre Manager</div>
       <div class="text-[13px] opacity-85 mt-0.5">Broome Recreation and Aquatic Centre</div>
     </div>
-    <div class="flex items-center gap-3">
-      <span id="whoami" class="text-white/90 text-sm font-semibold"></span>
-      <button id="logoutBtn"
-        class="px-4 py-2 rounded-xl bg-white/90 text-slate-900 font-bold hover:bg-white">
-        Logout
-      </button>
-    </div>
 
       <script>
       document.getElementById('logoutBtn')?.addEventListener('click', async () => {
@@ -86,7 +85,7 @@
         location.href = '/login.html';
       });
       </script>
-      
+
       <script>
       (async function initUser(){
         try {
