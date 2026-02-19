@@ -2,7 +2,7 @@
 -- BRAC Tools Incident/Register Module (WA) - MySQL 8+
 -- Creates incident register, refusal register, staff link, audit trail, and photo attachments.
 
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS staff_users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   display_name VARCHAR(255) NOT NULL,
   email VARCHAR(255) NULL,
@@ -27,10 +27,10 @@ CREATE TABLE IF NOT EXISTS incidents (
   incident_details TEXT NULL,
   actions_taken TEXT NULL,
   soft_locked TINYINT(1) NOT NULL DEFAULT 1,
-  created_by_user_id INT NOT NULL,
+  created_by_staff_id INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+  FOREIGN KEY (created_by_staff_id) REFERENCES staff_users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS incident_staff_links (
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS incident_staff_links (
   role_in_incident VARCHAR(120) NULL, -- e.g. Employee, Crowd Controller, Witness
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (incident_id) REFERENCES incidents(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id)
+  FOREIGN KEY (user_id) REFERENCES staff_users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Every edit creates a revision row with before/after snapshots + reason.
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS incident_revisions (
   after_json JSON NOT NULL,
   diff_json JSON NULL,
   FOREIGN KEY (incident_id) REFERENCES incidents(id) ON DELETE CASCADE,
-  FOREIGN KEY (edited_by_user_id) REFERENCES users(id)
+  FOREIGN KEY (edited_by_user_id) REFERENCES staff_users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS incident_files (
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS incident_files (
   sha256 CHAR(64) NOT NULL,
   storage_path VARCHAR(500) NOT NULL,
   FOREIGN KEY (incident_id) REFERENCES incidents(id) ON DELETE CASCADE,
-  FOREIGN KEY (uploaded_by_user_id) REFERENCES users(id)
+  FOREIGN KEY (uploaded_by_user_id) REFERENCES staff_users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS refusals (
@@ -83,10 +83,10 @@ CREATE TABLE IF NOT EXISTS refusals (
   comments TEXT NULL,
   approved_manager_name VARCHAR(255) NULL,
   police_notified TINYINT(1) NOT NULL DEFAULT 0,
-  created_by_user_id INT NOT NULL,
+  created_by_staff_id INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (created_by_user_id) REFERENCES users(id)
+  FOREIGN KEY (created_by_staff_id) REFERENCES staff_users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS refusal_staff_links (
@@ -95,7 +95,7 @@ CREATE TABLE IF NOT EXISTS refusal_staff_links (
   user_id INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (refusal_id) REFERENCES refusals(id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(id)
+  FOREIGN KEY (user_id) REFERENCES staff_users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Generic audit log for all actions (view/export optional).
@@ -110,6 +110,6 @@ CREATE TABLE IF NOT EXISTS audit_log (
   user_agent VARCHAR(255) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_action_created_at (action, created_at),
-  FOREIGN KEY (user_id) REFERENCES users(id)
+  FOREIGN KEY (user_id) REFERENCES staff_users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
