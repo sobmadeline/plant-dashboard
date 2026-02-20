@@ -5,11 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>BRAC Tools - Login</title>
   <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+    #bg{
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      transform: scale(1.02);           /* tiny scale hides edge artifacts */
+      transition: opacity 900ms ease;   /* fade */
+      opacity: 1;
+      filter: brightness(0.55);         /* darken for readability */
+    }
+    </style>
 </head>
 <body class="min-h-screen bg-slate-50 text-slate-900">
+  <div id="bg" class="fixed inset-0 -z-10"></div>
 
   <div class="max-w-md mx-auto p-6">
-    <div class="mt-14 bg-white border rounded-2xl shadow-sm p-6">
+    <div class="mt-14 bg-white/90 backdrop-blur border rounded-2xl shadow-sm p-6">
       <div class="flex items-center gap-3">
         <a href="index" class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide"> 
             <img src="./images/ColourWebsiteLogo.png" alt="BRAC Logo" class="object-contain" /> 
@@ -44,15 +56,28 @@
                 class="mt-1 w-full px-4 py-3 rounded-2xl bg-emerald-600 text-white font-extrabold hover:opacity-90">
           Login
         </button>
-
+          <div class="mt-4 text-center text-xs text-slate-500">
+            Need help? Contact your Operations Supervisor / Duty Manager.
+          </div>
         <div id="err" class="hidden text-sm text-red-800 bg-red-50 border border-red-200 rounded-xl p-3"></div>
       </div>
     </div>
-
-    <div class="mt-4 text-center text-xs text-slate-500">
-      Need help? Contact your Operations Supervisor / Duty Manager.
-    </div>
   </div>
+
+<script>
+  const slides = [
+    './loginslideshow/slide1.jpg',
+    './loginslideshow/slide2.jpg',
+    './loginslideshow/slide3.jpg',
+    './loginslideshow/slide4.jpg',
+    './loginslideshow/slide5.jpg',
+    './loginslideshow/slide6.jpg'
+  ];
+
+  const bg = document.getElementById('bg');
+  const pick = slides[Math.floor(Math.random() * slides.length)];
+  bg.style.backgroundImage = `url('${pick}')`;
+</script>
 
 <script>
   function qs(sel){ return document.querySelector(sel); }
