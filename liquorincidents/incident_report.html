@@ -13,13 +13,50 @@
 <label class="block"><div class="text-xs font-bold">Date</div><input id="incident_date" type="date" class="mt-1 w-full border rounded-xl p-2"></label>
 <label class="block"><div class="text-xs font-bold">Time</div><input id="incident_time" type="time" class="mt-1 w-full border rounded-xl p-2"></label>
 <label class="block md:col-span-2"><div class="text-xs font-bold">Location</div><input id="location" class="mt-1 w-full border rounded-xl p-2"></label>
-<label class="block"><div class="text-xs font-bold">Type</div><input id="incident_type" class="mt-1 w-full border rounded-xl p-2"></label>
+<label class="block">
+  <div class="text-xs font-bold">Incident type</div>
+  <select id="incident_type" class="mt-1 w-full border rounded-xl p-2">
+    <option value="">Select…</option>
+    <option value="Person - required to leave or be removed">Person - required to leave or be removed</option>
+<option value="Juvenile or suspected juvenile – no ID">Juvenile or suspected juvenile – no ID</option>
+<option value="Juvenile or suspected juvenile – forged / false / counterfeit ID">Juvenile or suspected juvenile – forged / false / counterfeit ID</option>
+<option value="Person – behaved in an offensive manner">Person – behaved in an offensive manner</option>
+<option value="Person - drunk">Person - drunk</option>
+<option value="Person (including Staff) - injured">Person (including Staff) - injured</option>
+<option value="Complaint – noise">Complaint – noise</option>
+<option value="Complaint – other">Complaint – other</option>
+    <option value="Complaint – other">Complaint – other</option>
+    <option value="Other">Other</option>
+  </select>
+  <input id="incident_type_other" class="mt-2 w-full border rounded-xl p-2 hidden" placeholder="If Other, describe…">
+</label>
 <label class="block"><div class="text-xs font-bold">CCTV</div><select id="cctv_available" class="mt-1 w-full border rounded-xl p-2"><option value="">Unknown</option><option value="1">Yes</option><option value="0">No</option></select></label>
 <label class="block"><div class="text-xs font-bold">Approved manager</div><input id="approved_manager_name" class="mt-1 w-full border rounded-xl p-2"></label>
 <label class="block"><div class="text-xs font-bold">Reporting person</div><input id="reporting_person_name" class="mt-1 w-full border rounded-xl p-2"></label>
-<label class="block md:col-span-2"><div class="text-xs font-bold">Authorities notified (comma)</div><input id="authorities_notified" class="mt-1 w-full border rounded-xl p-2"></label>
+<div class="md:col-span-2">
+  <div class="text-xs font-bold">Authorities notified</div>
+  <div class="mt-1 flex flex-wrap gap-2">
+    <label class="flex items-center gap-2 bg-white border rounded-xl px-3 py-2">
+  <input type="checkbox" class="h-4 w-4" id="auth_police">
+  <span class="font-semibold">WA Police</span>
+</label>
+<label class="flex items-center gap-2 bg-white border rounded-xl px-3 py-2">
+  <input type="checkbox" class="h-4 w-4" id="auth_emergency">
+  <span class="font-semibold">Emergency Services</span>
+</label>
+<label class="flex items-center gap-2 bg-white border rounded-xl px-3 py-2">
+  <input type="checkbox" class="h-4 w-4" id="auth_dlgirs">
+  <span class="font-semibold">Department of Local Government, Industry Regulation and Safety</span>
+</label>
+    <label class="flex items-center gap-2 bg-white border rounded-xl px-3 py-2">
+      <input type="checkbox" class="h-4 w-4" id="auth_other">
+      <span class="font-semibold">Other</span>
+    </label>
+  </div>
+  <input id="auth_other_text" class="mt-2 w-full border rounded-xl p-2 hidden" placeholder="Other authority (details)…">
+</div>
 <div class="md:col-span-2 flex gap-6">
-<label class="flex items-center gap-2"><input id="police_notified" type="checkbox">Police notified</label>
+<label class="flex items-center gap-2"><input id="police_notified" type="checkbox" class="h-4 w-4"><span class="font-bold">Police notified</span></label>
 <label class="flex items-center gap-2"><input id="physical_force" type="checkbox">Physical force</label>
 </div>
 <label class="block md:col-span-2"><div class="text-xs font-bold">Details</div><textarea id="incident_details" rows="5" class="mt-1 w-full border rounded-xl p-2"></textarea></label>
@@ -30,16 +67,72 @@
 </div></main>
 <script>
 function initDefaults(){const d=new Date();qs('#incident_date').value=d.toISOString().slice(0,10);qs('#incident_time').value=d.toTimeString().slice(0,5);}
-async function submitIncident(){
+async async function submitIncident(){
   try{
-    const auths=(qs('#authorities_notified').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const auths=[];
+    if(qs('#auth_police')?.checked) auths.push('WA Police');
+    if(qs('#auth_emergency')?.checked) auths.push('Emergency Services');
+    if(qs('#auth_dlgirs')?.checked) auths.push('Department of Local Government, Industry Regulation and Safety');
+    if(qs('#auth_other')?.checked){ const t=(qs('#auth_other_text').value||'').trim(); if(t) auths.push('Other: '+t); else auths.push('Other'); }
+    const staffIds=JSON.parse(qs('#staff_ids').value||'[]');
+    let itype=qs('#incident_type').value; if(itype==='Other'){ const t=(qs('#incident_type_other').value||'').trim(); if(t) itype='Other: '+t; }
     const payload={incident_date:qs('#incident_date').value,incident_time:qs('#incident_time').value,location:qs('#location').value,
       cctv_available:qs('#cctv_available').value===''?null:Number(qs('#cctv_available').value),
       approved_manager_name:qs('#approved_manager_name').value,reporting_person_name:qs('#reporting_person_name').value,
-      incident_type:qs('#incident_type').value,authorities_notified:auths,police_notified:qs('#police_notified').checked?1:0,
+      incident_type:itype,authorities_notified:auths,staff_ids:staffIds,police_notified:qs('#police_notified').checked?1:0,
       physical_force:qs('#physical_force').checked?1:0,incident_details:qs('#incident_details').value,actions_taken:qs('#actions_taken').value};
     const out=await api('./api/incidents_create.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     toast('Saved '+out.incident_no);location.href='./view_incident.html?id='+out.id;
   }catch(e){toast(e.message);}
 }
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  // show/hide Other incident type
+  const typeSel = qs('#incident_type');
+  const typeOther = qs('#incident_type_other');
+  if(typeSel){
+    const syncType=()=>{ 
+      const isOther = typeSel.value==='Other';
+      typeOther.classList.toggle('hidden', !isOther);
+      if(!isOther) typeOther.value='';
+    };
+    typeSel.addEventListener('change', syncType);
+    syncType();
+  }
+
+  // show/hide Other authority
+  const aOther = qs('#auth_other');
+  const aOtherText = qs('#auth_other_text');
+  if(aOther){
+    const syncAuth=()=>{
+      const on = aOther.checked;
+      aOtherText.classList.toggle('hidden', !on);
+      if(!on) aOtherText.value='';
+    };
+    aOther.addEventListener('change', syncAuth);
+    syncAuth();
+  }
+
+  // keep Police checkbox + WA Police authority in sync
+  const p = qs('#police_notified');
+  const ap = qs('#auth_police');
+  if(p && ap){
+    const syncFromPolice = ()=>{ ap.checked = p.checked; };
+    const syncFromAuth = ()=>{ p.checked = ap.checked; };
+    p.addEventListener('change', syncFromPolice);
+    ap.addEventListener('change', syncFromAuth);
+  }
+
+  // staff picker
+  if(window.initStaffPicker){
+    initStaffPicker({
+      searchInput:'#staff_search',
+      results:'#staff_results',
+      chips:'#staff_chips',
+      hidden:'#staff_ids',
+      endpoint:'./api/staff_list.php'
+    });
+  }
+});
+
 </script></body></html>

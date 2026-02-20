@@ -13,9 +13,34 @@
 <label class="block"><div class="text-xs font-bold">Date</div><input id="refusal_date" type="date" class="mt-1 w-full border rounded-xl p-2"></label>
 <label class="block"><div class="text-xs font-bold">Time</div><input id="refusal_time" type="time" class="mt-1 w-full border rounded-xl p-2"></label>
 <label class="block md:col-span-2"><div class="text-xs font-bold">Location</div><input id="location" class="mt-1 w-full border rounded-xl p-2"></label>
-<label class="block"><div class="text-xs font-bold">Reason</div><input id="reason" class="mt-1 w-full border rounded-xl p-2"></label>
+<label class="block">
+  <div class="text-xs font-bold">Reason for refusal</div>
+  <select id="reason" class="mt-1 w-full border rounded-xl p-2">
+    <option value="">Select…</option>
+    <option value="Drunkenness">Drunkenness</option>
+<option value="Juvenile, or suspected juvenile, failed to produce acceptable proof of age">Juvenile, or suspected juvenile, failed to produce acceptable proof of age</option>
+<option value="Offensive, disorderly, or quarrelsome behaviour">Offensive, disorderly, or quarrelsome behaviour</option>
+<option value="Refused patron attempts to regain entry or behaves in an offensive manner">Refused patron attempts to regain entry or behaves in an offensive manner</option>
+<option value="Banned Drinkers Register was inoperable or not able to be used">Banned Drinkers Register was inoperable or not able to be used</option>
+    <option value="Other">Other</option>
+  </select>
+  <input id="reason_other" class="mt-2 w-full border rounded-xl p-2 hidden" placeholder="If Other, describe…">
+</label>
 <label class="block"><div class="text-xs font-bold">CCTV</div><select id="cctv_available" class="mt-1 w-full border rounded-xl p-2"><option value="">Unknown</option><option value="1">Yes</option><option value="0">No</option></select></label>
 <label class="block md:col-span-2"><div class="text-xs font-bold">Comments</div><textarea id="comments" rows="5" class="mt-1 w-full border rounded-xl p-2"></textarea></label>
+<div class="md:col-span-2">
+  <div class="text-xs font-bold">Employees / crowd controllers involved (if any)</div>
+  <div class="mt-1 border rounded-2xl p-3 bg-slate-50">
+    <div class="flex gap-2 items-center">
+      <input id="staff_search" type="search" placeholder="Search staff…" class="w-full border rounded-xl p-2 bg-white">
+      <button type="button" id="staff_clear" class="px-3 py-2 rounded-xl border font-bold bg-white hover:bg-slate-100">Clear</button>
+    </div>
+    <div id="staff_results" class="mt-2 hidden border rounded-xl bg-white overflow-hidden"></div>
+    <div id="staff_chips" class="mt-2 flex flex-wrap gap-2"></div>
+    <input type="hidden" id="staff_ids" value="[]">
+    <div class="text-xs text-slate-600 mt-2">Start typing a name. Click a result to add. Click a chip to remove.</div>
+  </div>
+</div>
 <label class="block"><div class="text-xs font-bold">Approved manager</div><input id="approved_manager_name" class="mt-1 w-full border rounded-xl p-2"></label>
 <label class="flex items-center gap-2 mt-6"><input id="police_notified" type="checkbox">Police notified</label>
 </div>
@@ -24,14 +49,40 @@
 </div></main>
 <script>
 function initDefaults(){const d=new Date();qs('#refusal_date').value=d.toISOString().slice(0,10);qs('#refusal_time').value=d.toTimeString().slice(0,5);}
-async function submitRefusal(){
+async async function submitRefusal(){
   try{
+    const staffIds=JSON.parse(qs('#staff_ids').value||'[]');
+    let r=qs('#reason').value; if(r==='Other'){ const t=(qs('#reason_other').value||'').trim(); if(t) r='Other: '+t; }
     const payload={refusal_date:qs('#refusal_date').value,refusal_time:qs('#refusal_time').value,location:qs('#location').value,
       cctv_available:qs('#cctv_available').value===''?null:Number(qs('#cctv_available').value),
-      reason:qs('#reason').value,comments:qs('#comments').value,approved_manager_name:qs('#approved_manager_name').value,
+      reason:r,staff_ids:staffIds,comments:qs('#comments').value,approved_manager_name:qs('#approved_manager_name').value,
       police_notified:qs('#police_notified').checked?1:0};
     const out=await api('./api/refusals_create.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     toast('Saved '+out.refusal_no);location.href='./view_refusal.html?id='+out.id;
   }catch(e){toast(e.message);}
 }
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  const sel = qs('#reason');
+  const other = qs('#reason_other');
+  if(sel){
+    const sync=()=>{
+      const on = sel.value==='Other';
+      other.classList.toggle('hidden', !on);
+      if(!on) other.value='';
+    };
+    sel.addEventListener('change', sync);
+    sync();
+  }
+  if(window.initStaffPicker){
+    initStaffPicker({
+      searchInput:'#staff_search',
+      results:'#staff_results',
+      chips:'#staff_chips',
+      hidden:'#staff_ids',
+      endpoint:'./api/staff_list.php'
+    });
+  }
+});
+
 </script></body></html>
