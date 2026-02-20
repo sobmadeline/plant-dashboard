@@ -22,7 +22,7 @@
   <div id="bg" class="fixed inset-0 -z-10"></div>
 
   <div class="max-w-md mx-auto p-6">
-    <div class="mt-14 bg-white/90 backdrop-blur border rounded-2xl shadow-sm p-6">
+    <div class="mt-14 bg-white/70 backdrop-blur border rounded-2xl shadow-sm p-6">
       <div class="flex items-center gap-3">
         <a href="index" class="max-h-10 max-w-[211px] rounded-xl text-white flex items-center justify-center font-black tracking-wide"> 
             <img src="./images/ColourWebsiteLogo.png" alt="BRAC Logo" class="object-contain" /> 
@@ -146,6 +146,48 @@
 
   // Autofocus RFID field for scanners (nice for front desk)
   qs('#rfid').focus();
+
+  // Auto-submit when RFID scan finishes (for readers that don't send Enter)
+  (function autoSubmitRFID(){
+    const rfidEl = qs('#rfid');
+    let t = null;
+    let lastInputAt = 0;
+
+    const IDLE_MS = 250;     // how long to wait after last char
+    const MIN_LEN = 4;      // ignore very short inputs
+    const BURST_MS = 80;    // max average ms between chars to count as "scanner"
+
+    let firstCharAt = 0;
+    let charCount = 0;
+
+    rfidEl.addEventListener('input', () => {
+      const now = performance.now();
+      const val = rfidEl.value.trim();
+
+      // Track burst timing
+      if (charCount === 0) firstCharAt = now;
+      charCount++;
+
+      clearTimeout(t);
+      t = setTimeout(() => {
+        const totalTime = performance.now() - firstCharAt;
+        const avgMsPerChar = totalTime / Math.max(1, charCount);
+
+        // Reset counters for next time
+        charCount = 0;
+
+        // Basic sanity checks
+        if (!val || val.length < MIN_LEN) return;
+        if (qs('#btn').disabled) return;
+
+        // Only auto-submit if this looked like a fast scanner burst
+        if (avgMsPerChar > BURST_MS) return;
+
+        login();
+      }, IDLE_MS);
+    });
+  })();
+
 </script>
 </body>
 </html>
