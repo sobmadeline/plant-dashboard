@@ -1,0 +1,75 @@
+<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="./assets/app.css"/><script src="./assets/app.js"></script>
+<title>Print Register</title></head>
+<body class="bg-white" onload="guard(); loadAndRender();">
+
+<header class="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-3 no-print">
+  <div class="font-extrabold">Print Register</div>
+  <div class="flex items-center gap-3">
+    <span id="whoami" class="text-white/90 text-sm font-semibold"></span>
+    <button class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 font-bold" onclick="doLogout()">Logout</button>
+  </div>
+</header>
+<div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg z-50 no-print"></div>
+
+<main class="max-w-6xl mx-auto p-4">
+  <div class="no-print flex gap-2 mb-3">
+    <button class="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold" onclick="window.print()">Print</button>
+    <a class="px-4 py-2 rounded-xl border font-bold" href="./register.html">Back</a>
+  </div>
+
+  <div id="wrap"></div>
+</main>
+
+<script>
+async function loadAndRender(){
+  try{
+    const u = new URL(location.href);
+    const month = u.searchParams.get('month') || yyyymmToday();
+
+    await api('./api/print_log.php', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({what:'monthly_register', meta:{month: month}})});
+
+    const inc = await api(`./api/incidents_list.php?month=${encodeURIComponent(month)}&q=`);
+    const ref = await api(`./api/refusals_list.php?month=${encodeURIComponent(month)}&q=`);
+
+    let html = `<h1 class="text-2xl font-extrabold">Liquor Incident & Refusal Register — ${month}</h1>`;
+    html += `<h2 class="text-xl font-extrabold mt-6">Incidents</h2>`;
+    html += `<table class="w-full mt-2 border-collapse text-sm"><thead><tr>
+      <th class="border p-2 text-left">No</th><th class="border p-2">Date</th><th class="border p-2">Time</th>
+      <th class="border p-2 text-left">Location</th><th class="border p-2 text-left">Type</th><th class="border p-2 text-left">Created by</th>
+    </tr></thead><tbody>`;
+    (inc.items||[]).forEach(i=>{
+      html += `<tr>
+        <td class="border p-2">${i.incident_no||''}</td>
+        <td class="border p-2">${i.incident_date||''}</td>
+        <td class="border p-2">${String(i.incident_time||'').slice(0,5)}</td>
+        <td class="border p-2">${i.location||''}</td>
+        <td class="border p-2">${i.incident_type||''}</td>
+        <td class="border p-2">${i.created_by_name||''}</td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+
+    html += `<h2 class="text-xl font-extrabold mt-6">Refusals</h2>`;
+    html += `<table class="w-full mt-2 border-collapse text-sm"><thead><tr>
+      <th class="border p-2 text-left">No</th><th class="border p-2">Date</th><th class="border p-2">Time</th>
+      <th class="border p-2 text-left">Location</th><th class="border p-2 text-left">Reason</th><th class="border p-2 text-left">Created by</th>
+    </tr></thead><tbody>`;
+    (ref.items||[]).forEach(r=>{
+      html += `<tr>
+        <td class="border p-2">${r.refusal_no||''}</td>
+        <td class="border p-2">${r.refusal_date||''}</td>
+        <td class="border p-2">${String(r.refusal_time||'').slice(0,5)}</td>
+        <td class="border p-2">${r.location||''}</td>
+        <td class="border p-2">${r.reason||''}</td>
+        <td class="border p-2">${r.created_by_name||''}</td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+
+    qs('#wrap').innerHTML = html;
+  } catch(e){
+    toast(e.message);
+  }
+}
+</script>
+</body></html>
