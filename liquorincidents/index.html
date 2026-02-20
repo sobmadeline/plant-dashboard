@@ -1,7 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="./assets/app.css"/><script src="./assets/app.js"></script>
-<title>Liquor Incidents</title></head>
-<body class="bg-slate-50" onload="guard()">
-
+<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="./assets/app.css"/><script src="./assets/app.js"></script><title>Liquor Incidents</title></head><body class='bg-slate-50' onload='guard()'>
 <header class="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-3 no-print">
   <div class="font-extrabold">Liquor Incidents & Refusals</div>
   <div class="flex items-center gap-3">
@@ -10,29 +7,4 @@
   </div>
 </header>
 <div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg z-50 no-print"></div>
-
-<main class="max-w-5xl mx-auto p-4">
-  <div class="grid md:grid-cols-3 gap-4">
-    <a href="./incident_report.html" class="bg-white border rounded-2xl p-5 shadow-sm hover:shadow transition">
-      <div class="text-xl font-extrabold">New Incident</div>
-      <div class="text-sm text-slate-600 mt-1">Create an incident report (audited).</div>
-    </a>
-    <a href="./refusal_report.html" class="bg-white border rounded-2xl p-5 shadow-sm hover:shadow transition">
-      <div class="text-xl font-extrabold">New Refusal</div>
-      <div class="text-sm text-slate-600 mt-1">Create refusal of service/entry (audited).</div>
-    </a>
-    <a href="./register.html" class="bg-white border rounded-2xl p-5 shadow-sm hover:shadow transition">
-      <div class="text-xl font-extrabold">Register</div>
-      <div class="text-sm text-slate-600 mt-1">Search + print registers quickly.</div>
-    </a>
-  </div>
-
-  <div class="mt-4">
-    <a href="./permissions.html" class="text-sm text-slate-700 underline">Permissions (Admin)</a>
-  </div>
-
-  <div class="mt-6 text-xs text-slate-500">
-    IDs are shared across Incidents + Refusals: <b>INC-YYYYMM-000000</b>.
-  </div>
-</main>
-</body></html>
+<main class='max-w-5xl mx-auto p-4'><div class='grid md:grid-cols-3 gap-4'><a href='./incident_report.html' class='bg-white border rounded-2xl p-5 shadow-sm hover:shadow transition'><div class='text-xl font-extrabold'>New Incident</div></a><a href='./refusal_report.html' class='bg-white border rounded-2xl p-5 shadow-sm hover:shadow transition'><div class='text-xl font-extrabold'>New Refusal</div></a><a href='./register.html' class='bg-white border rounded-2xl p-5 shadow-sm hover:shadow transition'><div class='text-xl font-extrabold'>Register</div></a></div><div class='mt-4'><a class='text-sm underline' href='./permissions.html'>Permissions (Admin)</a></div></main></body></html>

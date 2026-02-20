@@ -1,7 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="./assets/app.css"/><script src="./assets/app.js"></script>
-<title>New Incident</title></head>
-<body class="bg-slate-50" onload="guard(); initDefaults();">
-
+<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="./assets/app.css"/><script src="./assets/app.js"></script><title>New Incident</title></head><body class='bg-slate-50' onload='guard();initDefaults();'>
 <header class="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-3 no-print">
   <div class="font-extrabold">New Incident</div>
   <div class="flex items-center gap-3">
@@ -11,100 +8,38 @@
 </header>
 <div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg z-50 no-print"></div>
 
-<main class="max-w-4xl mx-auto p-4">
-  <div class="bg-white border rounded-2xl p-5 shadow-sm">
-    <div class="grid md:grid-cols-2 gap-4">
-      <label class="block">
-        <div class="text-xs font-bold text-slate-700">Date</div>
-        <input id="incident_date" type="date" class="mt-1 w-full border rounded-xl p-2"/>
-      </label>
-      <label class="block">
-        <div class="text-xs font-bold text-slate-700">Time</div>
-        <input id="incident_time" type="time" class="mt-1 w-full border rounded-xl p-2"/>
-      </label>
-      <label class="block md:col-span-2">
-        <div class="text-xs font-bold text-slate-700">Location</div>
-        <input id="location" class="mt-1 w-full border rounded-xl p-2" placeholder="e.g., Back Bar"/>
-      </label>
-      <label class="block">
-        <div class="text-xs font-bold text-slate-700">Incident type</div>
-        <input id="incident_type" class="mt-1 w-full border rounded-xl p-2" placeholder="e.g., Intoxicated person"/>
-      </label>
-      <label class="block">
-        <div class="text-xs font-bold text-slate-700">CCTV available</div>
-        <select id="cctv_available" class="mt-1 w-full border rounded-xl p-2">
-          <option value="">Unknown</option>
-          <option value="1">Yes</option>
-          <option value="0">No</option>
-        </select>
-      </label>
-
-      <label class="block">
-        <div class="text-xs font-bold text-slate-700">Approved manager name</div>
-        <input id="approved_manager_name" class="mt-1 w-full border rounded-xl p-2"/>
-      </label>
-      <label class="block">
-        <div class="text-xs font-bold text-slate-700">Reporting person</div>
-        <input id="reporting_person_name" class="mt-1 w-full border rounded-xl p-2"/>
-      </label>
-
-      <label class="block md:col-span-2">
-        <div class="text-xs font-bold text-slate-700">Authorities notified (comma separated)</div>
-        <input id="authorities_notified" class="mt-1 w-full border rounded-xl p-2" placeholder="Police, Ambulance, RGL"/>
-      </label>
-
-      <div class="grid grid-cols-3 gap-3 md:col-span-2">
-        <label class="flex items-center gap-2"><input id="police_notified" type="checkbox"/> <span class="text-sm">Police notified</span></label>
-        <label class="flex items-center gap-2"><input id="physical_force" type="checkbox"/> <span class="text-sm">Physical force</span></label>
-      </div>
-
-      <label class="block md:col-span-2">
-        <div class="text-xs font-bold text-slate-700">Incident details</div>
-        <textarea id="incident_details" rows="5" class="mt-1 w-full border rounded-xl p-2"></textarea>
-      </label>
-      <label class="block md:col-span-2">
-        <div class="text-xs font-bold text-slate-700">Actions taken</div>
-        <textarea id="actions_taken" rows="4" class="mt-1 w-full border rounded-xl p-2"></textarea>
-      </label>
-    </div>
-
-    <div class="mt-4 flex gap-2 justify-end">
-      <a href="./index.html" class="px-4 py-2 rounded-xl border font-bold">Cancel</a>
-      <button class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-extrabold" onclick="submitIncident()">Save</button>
-    </div>
-  </div>
-</main>
-
+<main class="max-w-4xl mx-auto p-4"><div class="bg-white border rounded-2xl p-5 shadow-sm">
+<div class="grid md:grid-cols-2 gap-4">
+<label class="block"><div class="text-xs font-bold">Date</div><input id="incident_date" type="date" class="mt-1 w-full border rounded-xl p-2"></label>
+<label class="block"><div class="text-xs font-bold">Time</div><input id="incident_time" type="time" class="mt-1 w-full border rounded-xl p-2"></label>
+<label class="block md:col-span-2"><div class="text-xs font-bold">Location</div><input id="location" class="mt-1 w-full border rounded-xl p-2"></label>
+<label class="block"><div class="text-xs font-bold">Type</div><input id="incident_type" class="mt-1 w-full border rounded-xl p-2"></label>
+<label class="block"><div class="text-xs font-bold">CCTV</div><select id="cctv_available" class="mt-1 w-full border rounded-xl p-2"><option value="">Unknown</option><option value="1">Yes</option><option value="0">No</option></select></label>
+<label class="block"><div class="text-xs font-bold">Approved manager</div><input id="approved_manager_name" class="mt-1 w-full border rounded-xl p-2"></label>
+<label class="block"><div class="text-xs font-bold">Reporting person</div><input id="reporting_person_name" class="mt-1 w-full border rounded-xl p-2"></label>
+<label class="block md:col-span-2"><div class="text-xs font-bold">Authorities notified (comma)</div><input id="authorities_notified" class="mt-1 w-full border rounded-xl p-2"></label>
+<div class="md:col-span-2 flex gap-6">
+<label class="flex items-center gap-2"><input id="police_notified" type="checkbox">Police notified</label>
+<label class="flex items-center gap-2"><input id="physical_force" type="checkbox">Physical force</label>
+</div>
+<label class="block md:col-span-2"><div class="text-xs font-bold">Details</div><textarea id="incident_details" rows="5" class="mt-1 w-full border rounded-xl p-2"></textarea></label>
+<label class="block md:col-span-2"><div class="text-xs font-bold">Actions</div><textarea id="actions_taken" rows="4" class="mt-1 w-full border rounded-xl p-2"></textarea></label>
+</div>
+<div class="mt-4 flex gap-2 justify-end"><a href="./index.html" class="px-4 py-2 rounded-xl border font-bold">Cancel</a>
+<button class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-extrabold" onclick="submitIncident()">Save</button></div>
+</div></main>
 <script>
-function initDefaults(){
-  const d = new Date();
-  qs('#incident_date').value = d.toISOString().slice(0,10);
-  qs('#incident_time').value = d.toTimeString().slice(0,5);
-}
-
+function initDefaults(){const d=new Date();qs('#incident_date').value=d.toISOString().slice(0,10);qs('#incident_time').value=d.toTimeString().slice(0,5);}
 async function submitIncident(){
   try{
-    const auths = (qs('#authorities_notified').value || '').split(',').map(s=>s.trim()).filter(Boolean);
-    const payload = {
-      incident_date: qs('#incident_date').value,
-      incident_time: qs('#incident_time').value,
-      location: qs('#location').value,
-      cctv_available: qs('#cctv_available').value === '' ? null : Number(qs('#cctv_available').value),
-      approved_manager_name: qs('#approved_manager_name').value,
-      reporting_person_name: qs('#reporting_person_name').value,
-      incident_type: qs('#incident_type').value,
-      authorities_notified: auths,
-      police_notified: qs('#police_notified').checked ? 1 : 0,
-      physical_force: qs('#physical_force').checked ? 1 : 0,
-      incident_details: qs('#incident_details').value,
-      actions_taken: qs('#actions_taken').value
-    };
-    const out = await api('./api/incidents_create.php', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-    toast('Saved ' + out.incident_no);
-    location.href = './register.html';
-  } catch(e){
-    toast(e.message);
-  }
+    const auths=(qs('#authorities_notified').value||'').split(',').map(s=>s.trim()).filter(Boolean);
+    const payload={incident_date:qs('#incident_date').value,incident_time:qs('#incident_time').value,location:qs('#location').value,
+      cctv_available:qs('#cctv_available').value===''?null:Number(qs('#cctv_available').value),
+      approved_manager_name:qs('#approved_manager_name').value,reporting_person_name:qs('#reporting_person_name').value,
+      incident_type:qs('#incident_type').value,authorities_notified:auths,police_notified:qs('#police_notified').checked?1:0,
+      physical_force:qs('#physical_force').checked?1:0,incident_details:qs('#incident_details').value,actions_taken:qs('#actions_taken').value};
+    const out=await api('./api/incidents_create.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    toast('Saved '+out.incident_no);location.href='./view_incident.html?id='+out.id;
+  }catch(e){toast(e.message);}
 }
-</script>
-</body></html>
+</script></body></html>

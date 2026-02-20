@@ -36,3 +36,19 @@ function audit_log(?int $actorStaffId, string $action, string $entityType, $enti
     $m['ua'],
   ]);
 }
+
+function diff_assoc(array $before, array $after): array {
+  $diff = [];
+  $keys = array_unique(array_merge(array_keys($before), array_keys($after)));
+  foreach ($keys as $k) {
+    $bv = $before[$k] ?? null;
+    $av = $after[$k] ?? null;
+    if ($bv !== $av) $diff[$k] = ['from'=>$bv,'to'=>$av];
+  }
+  return $diff;
+}
+
+function rand_name(string $ext=''): string {
+  $b = bin2hex(random_bytes(16));
+  return $ext ? ($b . '.' . $ext) : $b;
+}

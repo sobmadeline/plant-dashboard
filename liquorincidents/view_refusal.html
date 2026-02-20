@@ -1,0 +1,84 @@
+<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="./assets/app.css"/><script src="./assets/app.js"></script><title>Refusal</title></head><body class='bg-slate-50' onload='guard();load();'>
+<header class="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-3 no-print">
+  <div class="font-extrabold">Refusal</div>
+  <div class="flex items-center gap-3">
+    <span id="whoami" class="text-white/90 text-sm font-semibold"></span>
+    <button class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 font-bold" onclick="doLogout()">Logout</button>
+  </div>
+</header>
+<div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg z-50 no-print"></div>
+
+<main class="max-w-4xl mx-auto p-4">
+<div id="warn" class="hidden bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-2xl mb-3"></div>
+<div class="bg-white border rounded-2xl p-5 shadow-sm">
+  <div id="top"></div>
+  <div class="grid md:grid-cols-2 gap-4 mt-4">
+    <label class="block"><div class="text-xs font-bold">Date</div><input id="refusal_date" type="date" class="mt-1 w-full border rounded-xl p-2"></label>
+    <label class="block"><div class="text-xs font-bold">Time</div><input id="refusal_time" type="time" class="mt-1 w-full border rounded-xl p-2"></label>
+    <label class="block md:col-span-2"><div class="text-xs font-bold">Location</div><input id="location" class="mt-1 w-full border rounded-xl p-2"></label>
+    <label class="block"><div class="text-xs font-bold">Reason</div><input id="reason" class="mt-1 w-full border rounded-xl p-2"></label>
+    <label class="block"><div class="text-xs font-bold">CCTV</div><select id="cctv_available" class="mt-1 w-full border rounded-xl p-2"><option value="">Unknown</option><option value="1">Yes</option><option value="0">No</option></select></label>
+    <label class="block md:col-span-2"><div class="text-xs font-bold">Comments</div><textarea id="comments" rows="5" class="mt-1 w-full border rounded-xl p-2"></textarea></label>
+    <label class="block"><div class="text-xs font-bold">Approved manager</div><input id="approved_manager_name" class="mt-1 w-full border rounded-xl p-2"></label>
+    <label class="flex items-center gap-2 mt-6"><input id="police_notified" type="checkbox">Police notified</label>
+  </div>
+
+  <div class="mt-4 border-t pt-4">
+    <div class="font-extrabold">Attachments</div>
+    <div id="files" class="text-sm mt-2 space-y-1"></div>
+    <div class="mt-2 flex gap-2 items-center no-print">
+      <input id="file" type="file" class="text-sm"/>
+      <button class="px-3 py-2 rounded-xl bg-slate-900 text-white font-bold" onclick="upload()">Upload</button>
+    </div>
+  </div>
+
+  <div class="mt-4 flex flex-wrap gap-2 justify-end no-print">
+    <a class="px-4 py-2 rounded-xl border font-bold" href="./register.html">Back</a>
+    <a class="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold" target="_blank" id="printLink">Print</a>
+    <input id="edit_reason" class="px-3 py-2 rounded-xl border" placeholder="Edit reason (required)"/>
+    <button class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-extrabold" onclick="save()">Save changes</button>
+  </div>
+</div></main>
+<script>
+let ID=null;
+function renderFiles(files){
+  qs('#files').innerHTML = (files||[]).map(f=>{
+    const href=`./api/file_download.php?entity=refusal&id=${f.id}`;
+    return `<div><a class="underline" href="${href}" target="_blank">${f.original_name}</a></div>`;
+  }).join('') || '<div class="text-slate-500">No attachments.</div>';
+}
+async function load(){
+  const u=new URL(location.href);ID=u.searchParams.get('id');qs('#printLink').href='./print_refusal.html?id='+encodeURIComponent(ID);
+  const lock=await api('./api/lock_acquire.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({entity_type:'refusal',entity_id:Number(ID),ttl_min:15})});
+  if(lock.warning){qs('#warn').classList.remove('hidden');qs('#warn').textContent=`Heads up: someone else may be editing this record (staff ID ${lock.lock.locked_by_staff_id}).`;}
+  const out=await api('./api/refusals_get.php?id='+encodeURIComponent(ID));const r=out.item;
+  qs('#top').innerHTML=`<div class="text-2xl font-extrabold">${r.refusal_no}</div><div class="text-sm text-slate-600">Created by ${r.created_by_name||''}</div>`;
+  qs('#refusal_date').value=r.refusal_date||'';qs('#refusal_time').value=String(r.refusal_time||'').slice(0,5);
+  qs('#location').value=r.location||'';qs('#reason').value=r.reason||'';
+  qs('#cctv_available').value=(r.cctv_available===null||r.cctv_available===undefined)?'':String(r.cctv_available);
+  qs('#comments').value=r.comments||'';qs('#approved_manager_name').value=r.approved_manager_name||'';
+  qs('#police_notified').checked=Number(r.police_notified)===1;
+  renderFiles(out.files||[]);
+}
+async function upload(){
+  try{
+    const inp=qs('#file'); if(!inp.files||!inp.files[0]) return toast('Choose a file first');
+    const fd=new FormData(); fd.append('refusal_id',ID); fd.append('file',inp.files[0]);
+    await api('./api/refusal_upload.php',{method:'POST',body:fd}); toast('Uploaded'); inp.value='';
+    const out=await api('./api/refusals_get.php?id='+encodeURIComponent(ID)); renderFiles(out.files||[]);
+  }catch(e){toast(e.message);}
+}
+async function save(){
+  try{
+    const reasonTxt=qs('#edit_reason').value.trim(); if(!reasonTxt) return toast('Edit reason required');
+    await api('./api/refusals_update.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      id:Number(ID),edit_reason:reasonTxt,refusal_date:qs('#refusal_date').value,refusal_time:qs('#refusal_time').value,location:qs('#location').value,
+      cctv_available:qs('#cctv_available').value===''?null:Number(qs('#cctv_available').value),
+      reason:qs('#reason').value,comments:qs('#comments').value,approved_manager_name:qs('#approved_manager_name').value,
+      police_notified:qs('#police_notified').checked?1:0
+    })});
+    toast('Saved'); qs('#edit_reason').value='';
+  }catch(e){toast(e.message);}
+}
+window.addEventListener('beforeunload',()=>{ if(!ID) return; navigator.sendBeacon('./api/lock_release.php', new Blob([JSON.stringify({entity_type:'refusal',entity_id:Number(ID)})],{type:'application/json'})); });
+</script></body></html>

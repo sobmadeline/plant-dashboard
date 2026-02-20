@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><script src="https://cdn.tailwindcss.com"></script><link rel="stylesheet" href="./assets/app.css"/><script src="./assets/app.js"></script><title>Print Incident</title></head><body class='bg-white' onload='guard();loadOne();'>
+<header class="bg-slate-900 text-white px-4 py-3 flex items-center justify-between gap-3 no-print">
+  <div class="font-extrabold">Print Incident</div>
+  <div class="flex items-center gap-3">
+    <span id="whoami" class="text-white/90 text-sm font-semibold"></span>
+    <button class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 font-bold" onclick="doLogout()">Logout</button>
+  </div>
+</header>
+<div id="toast" class="hidden fixed top-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg z-50 no-print"></div>
+
+<main class="max-w-3xl mx-auto p-4"><div class="no-print flex gap-2 mb-3"><button class="px-4 py-2 rounded-xl bg-slate-900 text-white font-bold" onclick="window.print()">Print</button><a class="px-4 py-2 rounded-xl border font-bold" href="./register.html">Back</a></div>
+<div id="wrap"></div></main>
+<script>
+async function loadOne(){
+  try{
+    const u=new URL(location.href);const id=u.searchParams.get('id');
+    const out=await api(`./api/incidents_get.php?id=${encodeURIComponent(id)}`);
+    await api('./api/print_log.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({what:'single_incident',meta:{id}})});
+    const i=out.item;
+    qs('#wrap').innerHTML=`<h1 class="text-2xl font-extrabold">${i.incident_no}</h1><div class="mt-2 text-sm"><b>Date:</b> ${i.incident_date} <b>Time:</b> ${String(i.incident_time||'').slice(0,5)}</div><div class="mt-1 text-sm"><b>Location:</b> ${i.location||''}</div><div class="mt-1 text-sm"><b>Type:</b> ${i.incident_type||''}</div><div class="mt-4"><b>Details</b><div class="whitespace-pre-wrap border rounded-xl p-3 mt-1">${i.incident_details||''}</div></div><div class="mt-4"><b>Actions</b><div class="whitespace-pre-wrap border rounded-xl p-3 mt-1">${i.actions_taken||''}</div></div>`;
+  }catch(e){toast(e.message);}
+}
+</script></body></html>
